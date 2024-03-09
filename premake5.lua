@@ -52,6 +52,7 @@ project "StripperCS2"
 		cppdialect "c++20"
 		include("premake/mm-windows.lua")
 		links { "psapi" }
+		staticruntime "On"
 
 	filter "system:linux"
 		cppdialect "c++2a"
