@@ -55,6 +55,13 @@ CGlobalVars* GetGameGlobals()
 	return g_pNetworkServerService->GetIGameServer()->GetGlobals();
 }
 
+CGameEntitySystem* GameEntitySystem()
+{
+	return nullptr;
+}
+
+std::map<std::pair<std::string, std::string>, std::vector<std::unique_ptr<BaseAction>>> g_mapOverrides;
+
 PLUGIN_EXPOSE(StripperCS2, g_StripperCS2);
 bool StripperCS2::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, bool late)
 {
@@ -62,7 +69,7 @@ bool StripperCS2::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, b
 	V_snprintf(szPath, sizeof(szPath), "%s%s", Plat_GetGameDirectory(), "/csgo/addons/StripperCS2/test.json");
 
 	Providers::JsonProvider provider;
-	provider.Load(szPath);
+	g_mapOverrides[std::make_pair("GLOBALOVERRIDE", "")] = provider.Load(szPath);
 
 	PLUGIN_SAVEVARS();
 
@@ -71,6 +78,9 @@ bool StripperCS2::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, b
 	GET_V_IFACE_ANY(GetServerFactory, server, IServerGameDLL, INTERFACEVERSION_SERVERGAMEDLL);
 	GET_V_IFACE_ANY(GetServerFactory, gameclients, IServerGameClients, INTERFACEVERSION_SERVERGAMECLIENTS);
 	GET_V_IFACE_ANY(GetEngineFactory, g_pNetworkServerService, INetworkServerService, NETWORKSERVERSERVICE_INTERFACE_VERSION);
+	GET_V_IFACE_ANY(GetEngineFactory, g_pWorldRendererMgr, IWorldRendererMgr, WORLD_RENDERER_MGR_INTERFACE_VERSION);
+
+	ConMsg("g_pWorldRendererMgr %p\n", g_pWorldRendererMgr);
 
 	// Required to get the IMetamodListener events
 	g_SMAPI->AddListener(this, this);
@@ -177,6 +187,49 @@ void StripperCS2::OnLevelInit(char const* pMapName,
 	bool loadGame,
 	bool background)
 {
+	g_mapOverrides.clear();
+
+	std::filesystem::path path(Plat_GetGameDirectory());
+	path /= "csgo/addons/StripperCS2/maps";
+	path /= pMapName;
+
+	if (!std::filesystem::exists(path))
+	{
+		META_CONPRINTF("No map overrides found for %s\n", pMapName);
+		return;
+	}
+
+	for (const auto& entry : std::filesystem::recursive_directory_iterator(path))
+	{
+		if (entry.is_regular_file())
+		{
+			std::filesystem::path filePath = entry.path();
+
+			std::filesystem::path cleanPath = filePath.lexically_relative(path);
+
+			ConMsg("Loading: %s\n", cleanPath.string().c_str());
+
+			if (filePath.extension() == ".json")
+			{
+				std::string worldName = cleanPath.has_parent_path() ? cleanPath.parent_path().string() : pMapName;
+				std::string lumpName = cleanPath.stem().string();
+
+				ConMsg("%s %s\n", worldName.c_str(), lumpName.c_str());
+				ConMsg("%s\n", cleanPath.string().c_str());
+
+				Providers::JsonProvider provider;
+
+				try {
+					g_mapOverrides[std::make_pair(worldName, lumpName)] = provider.Load(filePath.string());
+				}
+				catch (const std::exception& e)
+				{
+					META_CONPRINTF("Provider failed to parse %s: %s\n", filePath.string().c_str(), e.what());
+				}
+			}
+		}
+	}
+
 	META_CONPRINTF("OnLevelInit(%s)\n", pMapName);
 }
 
