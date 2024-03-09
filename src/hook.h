@@ -20,15 +20,28 @@
 #pragma once
 
 #include <funchook.h>
+#include <utlstring.h>
 
 namespace Hook
 {
 
-typedef int (*WorldInit_t)(void* pWorld, void* pSceneWorld, int a3, int a4);
-inline WorldInit_t g_pWorldInit = nullptr;
+class IWorldRendererMgr;
+
+class CSingleWorldRep
+{
+private:
+	void* vtable;
+public:
+	CUtlString m_name;
+	char pad[0x20];
+	void* m_pCWorld;
+};
+
+typedef int (*CreateWorldInternal_t)(IWorldRendererMgr* pThis, CSingleWorldRep* singleWorld);
+inline CreateWorldInternal_t g_pCreateWorldInternal = nullptr;
 inline funchook_t* g_pHook = nullptr;
 
-void Detour_WorldInit(void* pWorld, void* pSceneWorld, int a3, int a4);
+void Detour_WorldInit(IWorldRendererMgr* pThis, CSingleWorldRep* singleWorld);
 bool SetupHook();
 void Cleanup();
 

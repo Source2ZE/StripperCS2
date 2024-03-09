@@ -20,6 +20,11 @@
 #include "hook.h"
 #include <tier0/logging.h>
 #include "utils/module.h"
+#include <vector>
+#include <map>
+#include <memory>
+#include "actions/actions.h"
+#include "extension.h"
 
 #ifdef _WIN32
 #define ROOTBIN "/bin/win64/"
@@ -29,13 +34,126 @@
 #define GAMEBIN "/csgo/bin/linuxsteamrt64/"
 #endif
 
+
+#include <chrono>
+
+class Timer
+{
+public:
+	Timer()
+	{
+		m_StartTime = std::chrono::high_resolution_clock::now();
+	}
+
+	~Timer()
+	{
+		Stop();
+	}
+
+	void Stop()
+	{
+		auto endTime = std::chrono::high_resolution_clock::now();
+		auto start = std::chrono::time_point_cast<std::chrono::microseconds>(m_StartTime).time_since_epoch().count();
+		auto end = std::chrono::time_point_cast<std::chrono::microseconds>(endTime).time_since_epoch().count();
+
+		auto duration = end - start;
+		double ms = duration * 0.001;
+
+		ConMsg("%lli us (%f ms)\n", duration, ms);
+	}
+private:
+	std::chrono::time_point<std::chrono::high_resolution_clock> m_StartTime;
+};
+
+extern std::map<std::pair<std::string, std::string>, std::vector<std::unique_ptr<BaseAction>>> g_mapOverrides;
+
 namespace Hook
 {
 
-void Detour_WorldInit(void* pWorld, void* pSceneWorld, int a3, int a4)
+struct LumpData
 {
-	ConMsg("Detour_WorldInit\n");
-	g_pWorldInit(pWorld, pSceneWorld, a3, a4);
+	CUtlString m_name;
+	char pad[0x20];
+	CKeyValues3Context* m_allocatorContext;
+};
+
+void Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWorldRep* singleWorld)
+{
+	g_pCreateWorldInternal(pThis, singleWorld);
+	ConMsg("WORLD INIT %s %p %p\n", singleWorld->m_name.Get(), singleWorld, singleWorld->m_pCWorld);
+	auto pWorld = singleWorld->m_pCWorld;
+
+	{
+		Timer timer;
+		auto vecLumpData = (CUtlVector<void*>*)((uint8_t*)pWorld + 0x1B8);
+
+		ConMsg("Count %i %p\n", vecLumpData->Count(), vecLumpData);
+
+		FOR_EACH_VEC(*vecLumpData, i)
+		{
+			auto& lump = (*vecLumpData)[i];
+			auto lumpData = *(LumpData**)lump;
+
+			auto vecEntityKeyValues = (CUtlVector<CEntityKeyValues*>*)((uint8_t*)lumpData + 0x658);
+
+			ConMsg("Lump %s %p %p %i\n", lumpData->m_name.Get(), lumpData, vecEntityKeyValues, vecEntityKeyValues->Count());
+
+			if (g_mapOverrides.find({ singleWorld->m_name.Get(), lumpData->m_name.Get() }) != g_mapOverrides.end())
+			{
+				ConMsg("Map override applying %s %s\n", singleWorld->m_name.Get(), lumpData->m_name.Get());
+				for (const auto& action : g_mapOverrides[{singleWorld->m_name.Get(), lumpData->m_name.Get()}])
+				{
+					if (action->GetType() == ActionType_t::Filter)
+					{
+						auto filterAction = (FilterAction*)action.get();
+						FOR_EACH_VEC(*vecEntityKeyValues, j)
+						{
+
+							CEntityKeyValues* keyValues = (*vecEntityKeyValues)[j];
+
+							for (const auto& match : filterAction->m_vecMatches)
+							{
+								if (match.m_bIsIO)
+								{
+								}
+								else
+								{
+									if (!keyValues->HasValue(match.m_strName.c_str()) || V_strcmp(keyValues->GetString(match.m_strName.c_str()), match.m_strValue.c_str()) != 0)
+										goto SkipMatch;
+
+									vecEntityKeyValues->Remove(j);
+									j--;
+								}
+							}
+
+						SkipMatch:;
+						}
+					}
+
+					if (action->GetType() == ActionType_t::Add)
+					{
+						auto addAction = (AddAction*)action.get();
+
+						auto keyValues = new CEntityKeyValues(lumpData->m_allocatorContext, EKV_ALLOCATOR_EXTERNAL);
+
+						for (const auto& match : addAction->m_vecInsertions)
+						{
+							if (match.m_bIsIO)
+							{
+							}
+							else
+							{
+								keyValues->SetString(match.m_strName.c_str(), match.m_strValue.c_str());
+							}
+						}
+
+						keyValues->AddRef(); // this shit cost me like 3 hours :)
+						vecEntityKeyValues->AddToTail(keyValues);
+					}
+				}
+			}
+		}
+	}
 }
 
 bool SetupHook()
@@ -44,20 +162,20 @@ bool SetupHook()
 
 	int err;
 #ifdef WIN32
-	const byte sig[] = "\x48\x89\x5C\x24\x08\x57\x48\x83\xEC\x20\x48\x8B\x01\x48\x8B\xFA\x48\x8B\xD9\x48\x89\x91\x20\x01\x00\x00";
+	const byte sig[] = "\x48\x89\x54\x24\x10\x53\x55\x56\x57\x48\x81\xEC\x98\x00\x00\x00";
 #else
 	const byte sig[] = "";
 #endif
-	g_pWorldInit = (WorldInit_t)serverModule->FindSignature((byte*)sig, sizeof(sig) - 1, err);
+	g_pCreateWorldInternal = (CreateWorldInternal_t)serverModule->FindSignature((byte*)sig, sizeof(sig) - 1, err);
 
 	if (err)
 	{
-		ConMsg("[StripperCS2] Failed to find CWorld::Init signature: %i\n", err);
+		ConMsg("[StripperCS2] Failed to find CWorldRendererMgr::CreateWorld_Internal signature: %i\n", err);
 		return false;
 	}
 
 	auto g_pHook = funchook_create();
-	funchook_prepare(g_pHook, (void**)&g_pWorldInit, (void*)Detour_WorldInit);
+	funchook_prepare(g_pHook, (void**)&g_pCreateWorldInternal, (void*)Detour_CreateWorldInternal);
 	funchook_install(g_pHook, 0);
 
 	return true;

@@ -33,8 +33,7 @@ public:
 	JsonProvider() = default;
 	~JsonProvider() = default;
 
-	void Load(const std::string& path);
-
+	std::vector<std::unique_ptr<BaseAction>> Load(const std::string& path);
 private:
 
 };

@@ -27,7 +27,7 @@ using json = nlohmann::json;
 namespace Providers
 {
 
-void JsonProvider::Load(const std::string& path)
+std::vector<std::unique_ptr<BaseAction>> JsonProvider::Load(const std::string& path)
 {
 	nlohmann::json j;
 	std::ifstream i(path);
@@ -93,6 +93,9 @@ void JsonProvider::Load(const std::string& path)
 			}
 		}
 	}
+
+	return actions;
+
 }
 
 } // namespace Providers

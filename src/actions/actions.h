@@ -22,6 +22,13 @@
 #include <vector>
 #include "entitykeyvalues.h"
 
+enum ActionType_t
+{
+	Filter,
+	Modify,
+	Add
+};
+
 struct IOConnection
 {
 	std::string m_pszOutputName;
@@ -46,12 +53,14 @@ class BaseAction
 {
 public:
 	virtual ~BaseAction() = default;
+	virtual ActionType_t GetType() const = 0;
 };
 
 class FilterAction : public BaseAction
 {
 public:
 	FilterAction() = default;
+	ActionType_t GetType() const override { return ActionType_t::Filter; }
 public:
 	std::vector<ActionEntry> m_vecMatches;
 };
@@ -60,6 +69,7 @@ class ModifyAction : public BaseAction
 {
 public:
 	ModifyAction() = default;
+	ActionType_t GetType() const override { return ActionType_t::Modify; }
 public:
 	std::vector<ActionEntry> m_vecMatches;
 	std::vector<ActionEntry> m_vecReplacements;
@@ -71,6 +81,7 @@ class AddAction : public BaseAction
 {
 public:
 	AddAction() = default;
+	ActionType_t GetType() const override { return ActionType_t::Add; }
 public:
 	std::vector<ActionEntry> m_vecInsertions;
 };
