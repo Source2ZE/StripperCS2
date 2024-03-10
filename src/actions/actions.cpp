@@ -7,31 +7,32 @@ bool DoesEntityMatch(CEntityKeyValues* keyValues, std::vector<ActionEntry>& m_ve
 {
 	for (const auto& match : m_vecMatches)
 	{
-		if (match.m_bIsIO)
+		if (auto io = std::get_if<IOConnection>(&match.m_Value))
 		{
 		}
-		else
+		else if (auto str = std::get_if<std::string>(&match.m_Value))
 		{
+			// string compare
 			if (!keyValues->HasValue(match.m_strName.c_str()))
 				return false;
 
 			auto propValue = keyValues->GetString(match.m_strName.c_str());
-			if(match.m_bIsRegex)
-			{
-				// regex compare
-				pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(match.m_pRegex, NULL);
-				int rc = pcre2_match(match.m_pRegex, (PCRE2_SPTR)propValue, PCRE2_ZERO_TERMINATED, 0, 0, match_data, NULL);
+			if (V_strcmp(propValue, str->c_str()) != 0)
+				return false;
+		}
+		else if (auto pRegex = std::get_if<pcre2_code*>(&match.m_Value))
+		{
+			// regex compare
+			if (!keyValues->HasValue(match.m_strName.c_str()))
+				return false;
 
-				pcre2_match_data_free(match_data);
+			auto propValue = keyValues->GetString(match.m_strName.c_str());
+			pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(*pRegex, NULL);
+			int rc = pcre2_match(*pRegex, (PCRE2_SPTR)propValue, PCRE2_ZERO_TERMINATED, 0, 0, match_data, NULL);
 
-				return rc >= 0;
-			}
-			else
-			{
-				// string compare
-				if (V_strcmp(propValue, match.m_strValue.c_str()) != 0)
-					return false;
-			}
+			pcre2_match_data_free(match_data);
+
+			return rc >= 0;
 		}
 	}
 

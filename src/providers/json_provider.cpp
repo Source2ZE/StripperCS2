@@ -55,13 +55,13 @@ std::vector<std::unique_ptr<BaseAction>> JsonProvider::Load(const std::string& p
 		{
 			for (auto& match : filterAction->m_vecMatches)
 			{
-				if (match.m_bIsIO)
+				if (auto io = std::get_if<IOConnection>(&match.m_Value))
 				{
-					ConMsg("IO %s\n", match.m_IOConnection.m_pszInputName.c_str());
+					ConMsg("IO %s\n", io->m_pszInputName.c_str());
 				}
-				else
+				else if (auto str = std::get_if<std::string>(&match.m_Value))
 				{
-					ConMsg("Filter: %s %s\n", match.m_strName.c_str(), match.m_strValue.c_str());
+					ConMsg("Filter: %s %s\n", match.m_strName.c_str(), str->c_str());
 				}
 			}
 		}
@@ -70,25 +70,25 @@ std::vector<std::unique_ptr<BaseAction>> JsonProvider::Load(const std::string& p
 		{
 			for (auto& match : modifyAction->m_vecMatches)
 			{
-				if (match.m_bIsIO)
+				if (auto io = std::get_if<IOConnection>(&match.m_Value))
 				{
-					ConMsg("IO %s\n", match.m_IOConnection.m_pszInputName.c_str());
+					ConMsg("IO %s\n", io->m_pszInputName.c_str());
 				}
-				else
+				else if (auto str = std::get_if<std::string>(&match.m_Value))
 				{
-					ConMsg("Filter: %s %s\n", match.m_strName.c_str(), match.m_strValue.c_str());
+					ConMsg("Filter: %s %s\n", match.m_strName.c_str(), str->c_str());
 				}
 			}
 
 			for (auto& match : modifyAction->m_vecReplacements)
 			{
-				if (match.m_bIsIO)
+				if (auto io = std::get_if<IOConnection>(&match.m_Value))
 				{
-					ConMsg("IO %s\n", match.m_IOConnection.m_pszInputName.c_str());
+					ConMsg("IO %s\n", io->m_pszInputName.c_str());
 				}
-				else
+				else if (auto str = std::get_if<std::string>(&match.m_Value))
 				{
-					ConMsg("Filter: %s %s\n", match.m_strName.c_str(), match.m_strValue.c_str());
+					ConMsg("Filter: %s %s\n", match.m_strName.c_str(), str->c_str());
 				}
 			}
 		}

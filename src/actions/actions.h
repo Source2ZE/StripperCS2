@@ -22,6 +22,7 @@
 #include <vector>
 #include "entitykeyvalues.h"
 #include "pcre/pcre2.h"
+#include <variant>
 
 enum ActionType_t
 {
@@ -47,26 +48,22 @@ struct ActionEntry
 	ActionEntry() = default;
 	~ActionEntry()
 	{
-		if (m_bIsRegex && m_pRegex)
-			pcre2_code_free(m_pRegex);
+		if (auto pRegex = std::get_if<pcre2_code*>(&m_Value))
+			pcre2_code_free(*pRegex);
 	}
 
-	ActionEntry(ActionEntry&& other) noexcept
-		: m_nFlags(other.m_nFlags), m_strName(std::move(other.m_strName)), m_strValue(std::move(other.m_strValue)), m_IOConnection(std::move(other.m_IOConnection)), m_pRegex(other.m_pRegex)
+	ActionEntry(ActionEntry&& other) noexcept : m_strName(std::move(other.m_strName)), m_Value(std::move(other.m_Value))
 	{
-		other.m_pRegex = nullptr;
+		other.m_Value = std::monostate{};
 	}
 
 	ActionEntry& operator=(ActionEntry&& other) noexcept
 	{
 		if (this != &other)
 		{
-			m_nFlags = other.m_nFlags;
 			m_strName = std::move(other.m_strName);
-			m_strValue = std::move(other.m_strValue);
-			m_IOConnection = std::move(other.m_IOConnection);
-			m_pRegex = other.m_pRegex;
-			other.m_pRegex = nullptr;
+			m_Value = std::move(other.m_Value);
+			other.m_Value = std::monostate{};
 		}
 		return *this;
 	}
@@ -75,19 +72,8 @@ struct ActionEntry
 	ActionEntry(const ActionEntry&) = delete;
 	ActionEntry& operator=(const ActionEntry&) = delete;
 
-	union
-	{
-		struct
-		{
-			bool m_bIsIO : 1;
-			bool m_bIsRegex : 1;
-		};
-		uint8 m_nFlags;
-	};
 	std::string m_strName;
-	std::string m_strValue;
-	IOConnection m_IOConnection;
-	pcre2_code* m_pRegex = nullptr;
+	std::variant<std::monostate, std::string, IOConnection, pcre2_code*> m_Value;
 };
 
 class BaseAction

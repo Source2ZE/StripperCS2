@@ -35,7 +35,6 @@ void ParseEntry(nlohmann::detail::iteration_proxy<nlohmann::json::const_iterator
 		{
 			auto ParseIOFields = [&vecEntries](const json& j) {
 				ActionEntry entry;
-				entry.m_bIsIO = true;
 
 				IOConnection ioDesc;
 				for (auto& [ioKey, ioValue] : j.items())
@@ -50,7 +49,7 @@ void ParseEntry(nlohmann::detail::iteration_proxy<nlohmann::json::const_iterator
 						ioDesc.m_flDelay = ioValue.get<float>();
 				}
 
-				entry.m_IOConnection = std::move(ioDesc);
+				entry.m_Value = std::move(ioDesc);
 				vecEntries.push_back(std::move(entry));
 			};
 
@@ -66,31 +65,31 @@ void ParseEntry(nlohmann::detail::iteration_proxy<nlohmann::json::const_iterator
 		{
 			auto strValue = value.get<std::string>();
 			ActionEntry entry;
-			entry.m_bIsIO = false;
 			entry.m_strName = key;
 
 			// precompile regex if it starts and ends with '/', this will result in m_strValue being empty
 			if (strValue.length() >= 3 && strValue.front() == '/' && strValue.back() == '/')
 			{
-				entry.m_bIsRegex = true;
 				strValue = strValue.substr(1, strValue.length() - 2);
 				size_t nErrorOffset;
 				int nErrorNumber;
 
 				ConMsg("REGISTERED REGEX: %s\n", strValue.c_str());
 
-				entry.m_pRegex = pcre2_compile((PCRE2_SPTR)strValue.c_str(), strValue.length(), PCRE2_CASELESS, &nErrorNumber, &nErrorOffset, nullptr);
+				auto re = pcre2_compile((PCRE2_SPTR)strValue.c_str(), strValue.length(), PCRE2_CASELESS, &nErrorNumber, &nErrorOffset, nullptr);
 
-				if (!entry.m_pRegex)
+				if (!re)
 				{
 					PCRE2_UCHAR buffer[256];
 					pcre2_get_error_message(nErrorNumber, buffer, sizeof(buffer));
 					ConMsg("PCRE2 compilation failed at offset %d: %s\n", (int)nErrorOffset, buffer);
 					throw std::runtime_error("PCRE2 compilation failed on key: " + key);
 				}
+
+				entry.m_Value = re;
 			} 
 			else
-				entry.m_strValue = std::move(strValue);
+				entry.m_Value = std::move(strValue);
 
 			vecEntries.push_back(std::move(entry));
 		}

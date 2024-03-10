@@ -124,12 +124,12 @@ void Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWorldRep* singl
 
 						for (const auto& match : addAction->m_vecInsertions)
 						{
-							if (match.m_bIsIO)
+							if (auto io = std::get_if<IOConnection>(&match.m_Value))
 							{
 							}
-							else
+							else if (auto str = std::get_if<std::string>(&match.m_Value))
 							{
-								keyValues->SetString(match.m_strName.c_str(), match.m_strValue.c_str());
+								keyValues->SetString(match.m_strName.c_str(), str->c_str());
 							}
 						}
 
