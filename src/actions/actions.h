@@ -42,6 +42,7 @@ struct IOConnection
 	int32 m_nTimesToFire;
 };
 
+typedef std::variant<std::monostate, std::string, IOConnection, pcre2_code*> ActionVariant_t;
 
 struct ActionEntry
 {
@@ -73,7 +74,7 @@ struct ActionEntry
 	ActionEntry& operator=(const ActionEntry&) = delete;
 
 	std::string m_strName;
-	std::variant<std::monostate, std::string, IOConnection, pcre2_code*> m_Value;
+	ActionVariant_t m_Value;
 };
 
 class BaseAction
@@ -113,4 +114,5 @@ public:
 	std::vector<ActionEntry> m_vecInsertions;
 };
 
+bool DoesValueMatch(const char* value, const ActionVariant_t& variant);
 bool DoesEntityMatch(CEntityKeyValues* keyValues, std::vector<ActionEntry>& m_vecMatches);

@@ -136,6 +136,48 @@ void Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWorldRep* singl
 						keyValues->AddRef(); // this shit cost me like 3 hours :)
 						vecEntityKeyValues->AddToTail(keyValues);
 					}
+
+					if (action->GetType() == ActionType_t::Modify)
+					{
+						auto modifyAction = (ModifyAction*)action.get();
+						FOR_EACH_VEC(*vecEntityKeyValues, j)
+						{
+							auto keyValues = (*vecEntityKeyValues)[j];
+							if (!DoesEntityMatch(keyValues, modifyAction->m_vecMatches))
+								continue;
+
+
+							for (const auto& replace : modifyAction->m_vecReplacements)
+							{
+								if (auto io = std::get_if<IOConnection>(&replace.m_Value))
+								{
+								}
+								else if (auto str = std::get_if<std::string>(&replace.m_Value))
+								{
+									keyValues->SetString(replace.m_strName.c_str(), str->c_str());
+								}
+							}
+
+							for (const auto& _delete : modifyAction->m_vecDeletions)
+							{
+								if (auto io = std::get_if<IOConnection>(&_delete.m_Value))
+								{
+								}
+								else if (!std::holds_alternative<std::monostate>(_delete.m_Value))
+									if(keyValues->HasValue(_delete.m_strName.c_str()) && DoesValueMatch(keyValues->GetString(_delete.m_strName.c_str()), _delete.m_Value))
+										keyValues->RemoveKeyValue(_delete.m_strName.c_str());
+							}
+
+							for (const auto& insert : modifyAction->m_vecInsertions)
+							{
+								if (auto io = std::get_if<IOConnection>(&insert.m_Value))
+								{
+								}
+								else if (auto str = std::get_if<std::string>(&insert.m_Value))
+									keyValues->SetString(insert.m_strName.c_str(), str->c_str());
+							}
+						}
+					}
 				}
 			}
 		}

@@ -58,6 +58,7 @@ project "StripperCS2"
 		cppdialect "c++2a"
 		include("premake/mm-linux.lua")
 		links { "pthread", "z"}
+		linkoptions { '-static-libstdc++', '-static-libgcc' }
 
 	filter {}
 
@@ -71,8 +72,6 @@ project "StripperCS2"
 		"distorm",
 		"pcre"
 	}
-
-	linkoptions { '-static-libstdc++', '-static-libgcc' }
 
 	includedirs {
 		path.join("vendor", "nlohmann"),
