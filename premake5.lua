@@ -72,6 +72,8 @@ project "StripperCS2"
 		"pcre"
 	}
 
+	linkoptions { '-static-libstdc++', '-static-libgcc' }
+
 	includedirs {
 		path.join("vendor", "nlohmann"),
 		path.join("vendor", "funchook", "include"),
