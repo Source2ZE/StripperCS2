@@ -24,17 +24,8 @@
 #include "hook.h"
 #include <filesystem>
 #include "providers/json_provider.h"
-
-SH_DECL_HOOK3_void(IServerGameDLL, GameFrame, SH_NOATTRIB, 0, bool, bool, bool);
-SH_DECL_HOOK4_void(IServerGameClients, ClientActive, SH_NOATTRIB, 0, CPlayerSlot, bool, const char*, uint64);
-SH_DECL_HOOK5_void(IServerGameClients, ClientDisconnect, SH_NOATTRIB, 0, CPlayerSlot, ENetworkDisconnectionReason, const char*, uint64, const char*);
-SH_DECL_HOOK4_void(IServerGameClients, ClientPutInServer, SH_NOATTRIB, 0, CPlayerSlot, char const*, int, uint64);
-SH_DECL_HOOK1_void(IServerGameClients, ClientSettingsChanged, SH_NOATTRIB, 0, CPlayerSlot);
-SH_DECL_HOOK6_void(IServerGameClients, OnClientConnected, SH_NOATTRIB, 0, CPlayerSlot, const char*, uint64, const char*, const char*, bool);
-SH_DECL_HOOK6(IServerGameClients, ClientConnect, SH_NOATTRIB, 0, bool, CPlayerSlot, const char*, uint64, const char*, bool, CBufferString*);
-SH_DECL_HOOK2(IGameEventManager2, FireEvent, SH_NOATTRIB, 0, bool, IGameEvent*, bool);
-
-SH_DECL_HOOK2_void(IServerGameClients, ClientCommand, SH_NOATTRIB, 0, CPlayerSlot, const CCommand&);
+#include <spdlog/spdlog.h>
+#include <spdlog/fmt/bundled/color.h>
 
 StripperCS2 g_StripperCS2;
 IServerGameDLL* server = NULL;
@@ -65,11 +56,7 @@ std::map<std::pair<std::string, std::string>, std::vector<std::unique_ptr<BaseAc
 PLUGIN_EXPOSE(StripperCS2, g_StripperCS2);
 bool StripperCS2::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, bool late)
 {
-	char szPath[MAX_PATH];
-	V_snprintf(szPath, sizeof(szPath), "%s%s", Plat_GetGameDirectory(), "/csgo/addons/StripperCS2/test.json");
-
-	Providers::JsonProvider provider;
-	g_mapOverrides[std::make_pair("GLOBALOVERRIDE", "")] = provider.Load(szPath);
+	spdlog::set_pattern("%^[%T] [StripperCS2] [%l] %v%$");
 
 	PLUGIN_SAVEVARS();
 
@@ -80,47 +67,25 @@ bool StripperCS2::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, b
 	GET_V_IFACE_ANY(GetEngineFactory, g_pNetworkServerService, INetworkServerService, NETWORKSERVERSERVICE_INTERFACE_VERSION);
 	GET_V_IFACE_ANY(GetEngineFactory, g_pWorldRendererMgr, IWorldRendererMgr, WORLD_RENDERER_MGR_INTERFACE_VERSION);
 
-	ConMsg("g_pWorldRendererMgr %p\n", g_pWorldRendererMgr);
-
 	// Required to get the IMetamodListener events
 	g_SMAPI->AddListener(this, this);
 
-	META_CONPRINTF("Starting plugin.\n");
-
-	SH_ADD_HOOK(IServerGameDLL, GameFrame, server, SH_MEMBER(this, &StripperCS2::Hook_GameFrame), true);
-	SH_ADD_HOOK(IServerGameClients, ClientActive, gameclients, SH_MEMBER(this, &StripperCS2::Hook_ClientActive), true);
-	SH_ADD_HOOK(IServerGameClients, ClientDisconnect, gameclients, SH_MEMBER(this, &StripperCS2::Hook_ClientDisconnect), true);
-	SH_ADD_HOOK(IServerGameClients, ClientPutInServer, gameclients, SH_MEMBER(this, &StripperCS2::Hook_ClientPutInServer), true);
-	SH_ADD_HOOK(IServerGameClients, ClientSettingsChanged, gameclients, SH_MEMBER(this, &StripperCS2::Hook_ClientSettingsChanged), false);
-	SH_ADD_HOOK(IServerGameClients, OnClientConnected, gameclients, SH_MEMBER(this, &StripperCS2::Hook_OnClientConnected), false);
-	SH_ADD_HOOK(IServerGameClients, ClientConnect, gameclients, SH_MEMBER(this, &StripperCS2::Hook_ClientConnect), false);
-	SH_ADD_HOOK(IServerGameClients, ClientCommand, gameclients, SH_MEMBER(this, &StripperCS2::Hook_ClientCommand), false);
-
-	META_CONPRINTF("All hooks started!\n");
-
 	if (!Hook::SetupHook())
 	{
-		META_CONPRINTF("Failed to setup hook!\n");
+		spdlog::critical("Failed to setup hook!");
 		return false;
 	}
 
 	g_pCVar = icvar;
 	ConVar_Register(FCVAR_RELEASE | FCVAR_CLIENT_CAN_EXECUTE | FCVAR_GAMEDLL);
 
+	spdlog::info("Stripper loaded");
+
 	return true;
 }
 
 bool StripperCS2::Unload(char* error, size_t maxlen)
 {
-	SH_REMOVE_HOOK(IServerGameDLL, GameFrame, server, SH_MEMBER(this, &StripperCS2::Hook_GameFrame), true);
-	SH_REMOVE_HOOK(IServerGameClients, ClientActive, gameclients, SH_MEMBER(this, &StripperCS2::Hook_ClientActive), true);
-	SH_REMOVE_HOOK(IServerGameClients, ClientDisconnect, gameclients, SH_MEMBER(this, &StripperCS2::Hook_ClientDisconnect), true);
-	SH_REMOVE_HOOK(IServerGameClients, ClientPutInServer, gameclients, SH_MEMBER(this, &StripperCS2::Hook_ClientPutInServer), true);
-	SH_REMOVE_HOOK(IServerGameClients, ClientSettingsChanged, gameclients, SH_MEMBER(this, &StripperCS2::Hook_ClientSettingsChanged), false);
-	SH_REMOVE_HOOK(IServerGameClients, OnClientConnected, gameclients, SH_MEMBER(this, &StripperCS2::Hook_OnClientConnected), false);
-	SH_REMOVE_HOOK(IServerGameClients, ClientConnect, gameclients, SH_MEMBER(this, &StripperCS2::Hook_ClientConnect), false);
-	SH_REMOVE_HOOK(IServerGameClients, ClientCommand, gameclients, SH_MEMBER(this, &StripperCS2::Hook_ClientCommand), false);
-
 	Hook::Cleanup();
 
 	return true;
@@ -128,56 +93,6 @@ bool StripperCS2::Unload(char* error, size_t maxlen)
 
 void StripperCS2::AllPluginsLoaded()
 {
-	/* This is where we'd do stuff that relies on the mod or other plugins
-	 * being initialized (for example, cvars added and events registered).
-	 */
-}
-
-void StripperCS2::Hook_ClientActive(CPlayerSlot slot, bool bLoadGame, const char* pszName, uint64 xuid)
-{
-	META_CONPRINTF("Hook_ClientActive(%d, %d, \"%s\", %d)\n", slot, bLoadGame, pszName, xuid);
-}
-
-void StripperCS2::Hook_ClientCommand(CPlayerSlot slot, const CCommand& args)
-{
-	META_CONPRINTF("Hook_ClientCommand(%d, \"%s\")\n", slot, args.GetCommandString());
-}
-
-void StripperCS2::Hook_ClientSettingsChanged(CPlayerSlot slot)
-{
-	META_CONPRINTF("Hook_ClientSettingsChanged(%d)\n", slot);
-}
-
-void StripperCS2::Hook_OnClientConnected(CPlayerSlot slot, const char* pszName, uint64 xuid, const char* pszNetworkID, const char* pszAddress, bool bFakePlayer)
-{
-	META_CONPRINTF("Hook_OnClientConnected(%d, \"%s\", %d, \"%s\", \"%s\", %d)\n", slot, pszName, xuid, pszNetworkID, pszAddress, bFakePlayer);
-}
-
-bool StripperCS2::Hook_ClientConnect(CPlayerSlot slot, const char* pszName, uint64 xuid, const char* pszNetworkID, bool unk1, CBufferString* pRejectReason)
-{
-	META_CONPRINTF("Hook_ClientConnect(%d, \"%s\", %d, \"%s\", %d, \"%s\")\n", slot, pszName, xuid, pszNetworkID, unk1, pRejectReason->ToGrowable()->Get());
-
-	RETURN_META_VALUE(MRES_IGNORED, true);
-}
-
-void StripperCS2::Hook_ClientPutInServer(CPlayerSlot slot, char const* pszName, int type, uint64 xuid)
-{
-	META_CONPRINTF("Hook_ClientPutInServer(%d, \"%s\", %d, %d)\n", slot, pszName, type, xuid);
-}
-
-void StripperCS2::Hook_ClientDisconnect(CPlayerSlot slot, ENetworkDisconnectionReason reason, const char* pszName, uint64 xuid, const char* pszNetworkID)
-{
-	META_CONPRINTF("Hook_ClientDisconnect(%d, %d, \"%s\", %d, \"%s\")\n", slot, reason, pszName, xuid, pszNetworkID);
-}
-
-void StripperCS2::Hook_GameFrame(bool simulating, bool bFirstTick, bool bLastTick)
-{
-	/**
-	 * simulating:
-	 * ***********
-	 * true  | game is ticking
-	 * false | game is not ticking
-	 */
 }
 
 void StripperCS2::OnLevelInit(char const* pMapName,
@@ -195,7 +110,7 @@ void StripperCS2::OnLevelInit(char const* pMapName,
 
 	if (!std::filesystem::exists(path))
 	{
-		META_CONPRINTF("No map overrides found for %s\n", pMapName);
+		spdlog::warn("No map overrides found for {}", pMapName);
 		return;
 	}
 
@@ -224,7 +139,7 @@ void StripperCS2::OnLevelInit(char const* pMapName,
 				}
 				catch (const std::exception& e)
 				{
-					META_CONPRINTF("Provider failed to parse %s: %s\n", filePath.string().c_str(), e.what());
+					spdlog::error("Provider failed to parse {}: {}", filePath.string(), e.what());
 				}
 			}
 		}
@@ -250,12 +165,12 @@ bool StripperCS2::Unpause(char* error, size_t maxlen)
 
 const char* StripperCS2::GetLicense()
 {
-	return "Public Domain";
+	return "GPLv3";
 }
 
 const char* StripperCS2::GetVersion()
 {
-	return "1.0.0.0";
+	return "1.0.0";
 }
 
 const char* StripperCS2::GetDate()
@@ -265,25 +180,25 @@ const char* StripperCS2::GetDate()
 
 const char* StripperCS2::GetLogTag()
 {
-	return "SAMPLE";
+	return "STRIPPER";
 }
 
 const char* StripperCS2::GetAuthor()
 {
-	return "AlliedModders LLC";
+	return "Poggu";
 }
 
 const char* StripperCS2::GetDescription()
 {
-	return "Sample basic plugin";
+	return "CS2 Map Lump Editor";
 }
 
 const char* StripperCS2::GetName()
 {
-	return "Sample Plugin";
+	return "StripperCS2";
 }
 
 const char* StripperCS2::GetURL()
 {
-	return "http://www.sourcemm.net/";
+	return "https://poggu.me";
 }

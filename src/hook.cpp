@@ -25,6 +25,7 @@
 #include <memory>
 #include "actions/actions.h"
 #include "extension.h"
+#include <spdlog/spdlog.h>
 
 #ifdef _WIN32
 #define ROOTBIN "/bin/win64/"
@@ -59,7 +60,7 @@ public:
 		auto duration = end - start;
 		double ms = duration * 0.001;
 
-		ConMsg("%lli us (%f ms)\n", duration, ms);
+		spdlog::info("Took {} us ({} ms)", duration, ms);
 	}
 private:
 	std::chrono::time_point<std::chrono::high_resolution_clock> m_StartTime;
@@ -80,14 +81,12 @@ struct LumpData
 void Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWorldRep* singleWorld)
 {
 	g_pCreateWorldInternal(pThis, singleWorld);
-	ConMsg("WORLD INIT %s %p %p\n", singleWorld->m_name.Get(), singleWorld, singleWorld->m_pCWorld);
+
 	auto pWorld = singleWorld->m_pCWorld;
 
 	{
 		Timer timer;
-		auto vecLumpData = (CUtlVector<void*>*)((uint8_t*)pWorld + 0x1B8);
-
-		ConMsg("Count %i %p\n", vecLumpData->Count(), vecLumpData);
+		auto vecLumpData = (CUtlVector<void*>*)((uint8_t*)pWorld + 0x1B8);;
 
 		FOR_EACH_VEC(*vecLumpData, i)
 		{
@@ -96,11 +95,9 @@ void Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWorldRep* singl
 
 			auto vecEntityKeyValues = (CUtlVector<CEntityKeyValues*>*)((uint8_t*)lumpData + 0x658);
 
-			ConMsg("Lump %s %p %p %i\n", lumpData->m_name.Get(), lumpData, vecEntityKeyValues, vecEntityKeyValues->Count());
-
 			if (g_mapOverrides.find({ singleWorld->m_name.Get(), lumpData->m_name.Get() }) != g_mapOverrides.end())
 			{
-				ConMsg("Map override applying %s %s\n", singleWorld->m_name.Get(), lumpData->m_name.Get());
+				spdlog::info("Map override applying {} {}", singleWorld->m_name.Get(), lumpData->m_name.Get());
 				for (const auto& action : g_mapOverrides[{singleWorld->m_name.Get(), lumpData->m_name.Get()}])
 				{
 					if (action->GetType() == ActionType_t::Filter)
@@ -198,7 +195,7 @@ bool SetupHook()
 
 	if (err)
 	{
-		ConMsg("[StripperCS2] Failed to find CWorldRendererMgr::CreateWorld_Internal signature: %i\n", err);
+		spdlog::critical("Failed to find CWorldRendererMgr::CreateWorld_Internal signature: {}", err);
 		return false;
 	}
 

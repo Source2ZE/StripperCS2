@@ -70,14 +70,17 @@ project "StripperCS2"
 	links {
 		"funchook",
 		"distorm",
-		"pcre"
+		"pcre",
+		"spdlog"
 	}
 
 	includedirs {
 		path.join("vendor", "nlohmann"),
 		path.join("vendor", "funchook", "include"),
+		path.join("vendor", "spdlog", "include"),
 		path.join("vendor"),
 		path.join("src"),
 	}
 
 include "vendor/pcre"
+include "premake/spdlog"

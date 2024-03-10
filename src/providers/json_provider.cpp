@@ -49,51 +49,6 @@ std::vector<std::unique_ptr<BaseAction>> JsonProvider::Load(const std::string& p
 	if (j.find("modify") != j.end())
 		JSON::ParseModify(j, actions);
 
-	for (auto& action : actions)
-	{
-		if (auto filterAction = dynamic_cast<FilterAction*>(action.get()))
-		{
-			for (auto& match : filterAction->m_vecMatches)
-			{
-				if (auto io = std::get_if<IOConnection>(&match.m_Value))
-				{
-					ConMsg("IO %s\n", io->m_pszInputName.c_str());
-				}
-				else if (auto str = std::get_if<std::string>(&match.m_Value))
-				{
-					ConMsg("Filter: %s %s\n", match.m_strName.c_str(), str->c_str());
-				}
-			}
-		}
-
-		if (auto modifyAction = dynamic_cast<ModifyAction*>(action.get()))
-		{
-			for (auto& match : modifyAction->m_vecMatches)
-			{
-				if (auto io = std::get_if<IOConnection>(&match.m_Value))
-				{
-					ConMsg("IO %s\n", io->m_pszInputName.c_str());
-				}
-				else if (auto str = std::get_if<std::string>(&match.m_Value))
-				{
-					ConMsg("Filter: %s %s\n", match.m_strName.c_str(), str->c_str());
-				}
-			}
-
-			for (auto& match : modifyAction->m_vecReplacements)
-			{
-				if (auto io = std::get_if<IOConnection>(&match.m_Value))
-				{
-					ConMsg("IO %s\n", io->m_pszInputName.c_str());
-				}
-				else if (auto str = std::get_if<std::string>(&match.m_Value))
-				{
-					ConMsg("Filter: %s %s\n", match.m_strName.c_str(), str->c_str());
-				}
-			}
-		}
-	}
-
 	return actions;
 
 }
