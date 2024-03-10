@@ -108,25 +108,11 @@ void Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWorldRep* singl
 						auto filterAction = (FilterAction*)action.get();
 						FOR_EACH_VEC(*vecEntityKeyValues, j)
 						{
-
-							CEntityKeyValues* keyValues = (*vecEntityKeyValues)[j];
-
-							for (const auto& match : filterAction->m_vecMatches)
+							if (DoesEntityMatch((*vecEntityKeyValues)[j], filterAction->m_vecMatches))
 							{
-								if (match.m_bIsIO)
-								{
-								}
-								else
-								{
-									if (!keyValues->HasValue(match.m_strName.c_str()) || V_strcmp(keyValues->GetString(match.m_strName.c_str()), match.m_strValue.c_str()) != 0)
-										goto SkipMatch;
-
-									vecEntityKeyValues->Remove(j);
-									j--;
-								}
+								vecEntityKeyValues->Remove(j);
+								j--;
 							}
-
-						SkipMatch:;
 						}
 					}
 

@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 #include "entitykeyvalues.h"
+#include "pcre/pcre2.h"
 
 enum ActionType_t
 {
@@ -43,10 +44,50 @@ struct IOConnection
 
 struct ActionEntry
 {
-	bool m_bIsIO;
+	ActionEntry() = default;
+	~ActionEntry()
+	{
+		if (m_bIsRegex && m_pRegex)
+			pcre2_code_free(m_pRegex);
+	}
+
+	ActionEntry(ActionEntry&& other) noexcept
+		: m_nFlags(other.m_nFlags), m_strName(std::move(other.m_strName)), m_strValue(std::move(other.m_strValue)), m_IOConnection(std::move(other.m_IOConnection)), m_pRegex(other.m_pRegex)
+	{
+		other.m_pRegex = nullptr;
+	}
+
+	ActionEntry& operator=(ActionEntry&& other) noexcept
+	{
+		if (this != &other)
+		{
+			m_nFlags = other.m_nFlags;
+			m_strName = std::move(other.m_strName);
+			m_strValue = std::move(other.m_strValue);
+			m_IOConnection = std::move(other.m_IOConnection);
+			m_pRegex = other.m_pRegex;
+			other.m_pRegex = nullptr;
+		}
+		return *this;
+	}
+
+	// fuck copying
+	ActionEntry(const ActionEntry&) = delete;
+	ActionEntry& operator=(const ActionEntry&) = delete;
+
+	union
+	{
+		struct
+		{
+			bool m_bIsIO : 1;
+			bool m_bIsRegex : 1;
+		};
+		uint8 m_nFlags;
+	};
 	std::string m_strName;
 	std::string m_strValue;
 	IOConnection m_IOConnection;
+	pcre2_code* m_pRegex = nullptr;
 };
 
 class BaseAction
@@ -85,3 +126,5 @@ public:
 public:
 	std::vector<ActionEntry> m_vecInsertions;
 };
+
+bool DoesEntityMatch(CEntityKeyValues* keyValues, std::vector<ActionEntry>& m_vecMatches);

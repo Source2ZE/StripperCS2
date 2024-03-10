@@ -20,6 +20,7 @@
 #include <json.hpp>
 #include "actions/actions.h"
 #include "providers/json_provider.h"
+#include "pcre/pcre2.h"
 
 using json = nlohmann::json;
 
@@ -63,10 +64,34 @@ void ParseEntry(nlohmann::detail::iteration_proxy<nlohmann::json::const_iterator
 		}
 		else
 		{
+			auto strValue = value.get<std::string>();
 			ActionEntry entry;
 			entry.m_bIsIO = false;
 			entry.m_strName = key;
-			entry.m_strValue = value.get<std::string>();
+
+			// precompile regex if it starts and ends with '/', this will result in m_strValue being empty
+			if (strValue.length() >= 3 && strValue.front() == '/' && strValue.back() == '/')
+			{
+				entry.m_bIsRegex = true;
+				strValue = strValue.substr(1, strValue.length() - 2);
+				size_t nErrorOffset;
+				int nErrorNumber;
+
+				ConMsg("REGISTERED REGEX: %s\n", strValue.c_str());
+
+				entry.m_pRegex = pcre2_compile((PCRE2_SPTR)strValue.c_str(), strValue.length(), PCRE2_CASELESS, &nErrorNumber, &nErrorOffset, nullptr);
+
+				if (!entry.m_pRegex)
+				{
+					PCRE2_UCHAR buffer[256];
+					pcre2_get_error_message(nErrorNumber, buffer, sizeof(buffer));
+					ConMsg("PCRE2 compilation failed at offset %d: %s\n", (int)nErrorOffset, buffer);
+					throw std::runtime_error("PCRE2 compilation failed on key: " + key);
+				}
+			} 
+			else
+				entry.m_strValue = std::move(strValue);
+
 			vecEntries.push_back(std::move(entry));
 		}
 	}
