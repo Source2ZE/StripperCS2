@@ -136,7 +136,7 @@ It has 4 sub objects matching Stripper:Source's behavior.
             {
               // replaces only OnFullyClosed and OnOpen because they are in the match array, OnFullyOpen will be left alone
               "outputname": "CustomOutputName"
-            },
+            }
           }
         }
     ]
