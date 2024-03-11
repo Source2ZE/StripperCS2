@@ -23,6 +23,12 @@
 #include "entitykeyvalues.h"
 #include "pcre/pcre2.h"
 #include <variant>
+#include <optional>
+
+struct IOConnection;
+
+typedef std::variant<std::monostate, std::string, IOConnection, pcre2_code*> ActionVariant_t;
+typedef std::variant<std::monostate, std::string, pcre2_code*> IOConnectionVariant_t;
 
 enum ActionType_t
 {
@@ -33,16 +39,64 @@ enum ActionType_t
 
 struct IOConnection
 {
-	std::string m_pszOutputName;
-	EntityIOTargetType_t m_eTargetType;
-	std::string m_pszTargetName;
-	std::string m_pszInputName;
-	std::string m_pszOverrideParam;
-	float m_flDelay;
-	int32 m_nTimesToFire;
+	IOConnection() = default;
+	~IOConnection()
+	{
+		if (auto pRegex = std::get_if<pcre2_code*>(&m_pszOutputName))
+			pcre2_code_free(*pRegex);
+
+		if (auto pRegex = std::get_if<pcre2_code*>(&m_pszTargetName))
+			pcre2_code_free(*pRegex);
+
+		if (auto pRegex = std::get_if<pcre2_code*>(&m_pszInputName))
+			pcre2_code_free(*pRegex);
+
+		if (auto pRegex = std::get_if<pcre2_code*>(&m_pszOverrideParam))
+			pcre2_code_free(*pRegex);
+	}
+
+	IOConnection(IOConnection&& other) noexcept : m_pszOutputName(std::move(other.m_pszOutputName)), m_eTargetType(std::move(other.m_eTargetType)),
+		m_pszTargetName(std::move(other.m_pszTargetName)), m_pszInputName(std::move(other.m_pszInputName)),
+		m_pszOverrideParam(std::move(other.m_pszOverrideParam)), m_flDelay(std::move(other.m_flDelay)), m_nTimesToFire(std::move(other.m_nTimesToFire))
+	{
+		other.m_pszOutputName = std::monostate{};
+		other.m_pszTargetName = std::monostate{};
+		other.m_pszInputName = std::monostate{};
+		other.m_pszOverrideParam = std::monostate{};
+	}
+
+	IOConnection& operator=(IOConnection&& other) noexcept
+	{
+		if (this != &other)
+		{
+			m_pszOutputName = std::move(other.m_pszOutputName);
+			m_eTargetType = std::move(other.m_eTargetType);
+			m_flDelay = std::move(other.m_flDelay);
+			m_nTimesToFire = std::move(other.m_nTimesToFire);
+			m_pszTargetName = std::move(other.m_pszOutputName);
+			m_pszInputName = std::move(other.m_pszOutputName);
+			m_pszOverrideParam = std::move(other.m_pszOutputName);
+			other.m_pszOutputName = std::monostate{};
+			other.m_pszTargetName = std::monostate{};
+			other.m_pszInputName = std::monostate{};
+			other.m_pszOverrideParam = std::monostate{};
+		}
+		return *this;
+	}
+
+	// fuck copying
+	IOConnection(const IOConnection&) = delete;
+	IOConnection& operator=(const IOConnection&) = delete;
+
+	IOConnectionVariant_t m_pszOutputName;
+	std::optional<EntityIOTargetType_t> m_eTargetType;
+	IOConnectionVariant_t m_pszTargetName;
+	IOConnectionVariant_t m_pszInputName;
+	IOConnectionVariant_t m_pszOverrideParam;
+	std::optional<float> m_flDelay;
+	std::optional<int32> m_nTimesToFire;
 };
 
-typedef std::variant<std::monostate, std::string, IOConnection, pcre2_code*> ActionVariant_t;
 
 struct ActionEntry
 {
@@ -116,3 +170,4 @@ public:
 
 bool DoesValueMatch(const char* value, const ActionVariant_t& variant);
 bool DoesEntityMatch(CEntityKeyValues* keyValues, std::vector<ActionEntry>& m_vecMatches);
+void AddEntityInsert(CEntityKeyValues* keyValues, const ActionEntry& entry);

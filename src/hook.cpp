@@ -107,6 +107,7 @@ void Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWorldRep* singl
 						{
 							if (DoesEntityMatch((*vecEntityKeyValues)[j], filterAction->m_vecMatches))
 							{
+								spdlog::critical("ENTITY MATCHED");
 								vecEntityKeyValues->Remove(j);
 								j--;
 							}
@@ -119,16 +120,8 @@ void Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWorldRep* singl
 
 						auto keyValues = new CEntityKeyValues(lumpData->m_allocatorContext, EKV_ALLOCATOR_EXTERNAL);
 
-						for (const auto& match : addAction->m_vecInsertions)
-						{
-							if (auto io = std::get_if<IOConnection>(&match.m_Value))
-							{
-							}
-							else if (auto str = std::get_if<std::string>(&match.m_Value))
-							{
-								keyValues->SetString(match.m_strName.c_str(), str->c_str());
-							}
-						}
+						for (const auto& insert : addAction->m_vecInsertions)
+							AddEntityInsert(keyValues, insert);
 
 						keyValues->AddRef(); // this shit cost me like 3 hours :)
 						vecEntityKeyValues->AddToTail(keyValues);
@@ -142,7 +135,6 @@ void Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWorldRep* singl
 							auto keyValues = (*vecEntityKeyValues)[j];
 							if (!DoesEntityMatch(keyValues, modifyAction->m_vecMatches))
 								continue;
-
 
 							for (const auto& replace : modifyAction->m_vecReplacements)
 							{
@@ -166,13 +158,7 @@ void Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWorldRep* singl
 							}
 
 							for (const auto& insert : modifyAction->m_vecInsertions)
-							{
-								if (auto io = std::get_if<IOConnection>(&insert.m_Value))
-								{
-								}
-								else if (auto str = std::get_if<std::string>(&insert.m_Value))
-									keyValues->SetString(insert.m_strName.c_str(), str->c_str());
-							}
+								AddEntityInsert(keyValues, insert);
 						}
 					}
 				}

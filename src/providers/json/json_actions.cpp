@@ -27,6 +27,34 @@ using json = nlohmann::json;
 namespace Providers::JSON
 {
 
+template <typename T>
+void SetEntityField(T& variant, std::string&& value)
+{
+	// precompile regex if it starts and ends with '/', this will result in m_strValue being empty
+	if (value.length() >= 3 && value.front() == '/' && value.back() == '/')
+	{
+		value = value.substr(1, value.length() - 2);
+		size_t nErrorOffset;
+		int nErrorNumber;
+
+		ConMsg("REGISTERED REGEX: %s\n", value.c_str());
+
+		auto re = pcre2_compile((PCRE2_SPTR)value.c_str(), value.length(), PCRE2_CASELESS, &nErrorNumber, &nErrorOffset, nullptr);
+
+		if (!re)
+		{
+			PCRE2_UCHAR buffer[256];
+			pcre2_get_error_message(nErrorNumber, buffer, sizeof(buffer));
+			ConMsg("PCRE2 compilation failed at offset %d: %s\n", (int)nErrorOffset, buffer);
+			throw std::runtime_error("PCRE2 compilation failed on value: " + value);
+		}
+
+		variant = re;
+	}
+	else
+		variant = value;
+}
+
 void ParseEntry(nlohmann::detail::iteration_proxy<nlohmann::json::const_iterator>&& items, std::vector<ActionEntry>& vecEntries, bool isIOArray)
 {
 	for (auto& [key, value] : items)
@@ -40,13 +68,19 @@ void ParseEntry(nlohmann::detail::iteration_proxy<nlohmann::json::const_iterator
 				for (auto& [ioKey, ioValue] : j.items())
 				{
 					if (ioKey == "inputname")
-						ioDesc.m_pszInputName = ioValue.get<std::string>();
+						SetEntityField<IOConnectionVariant_t>(ioDesc.m_pszInputName, ioValue.get<std::string>());
 					else if (ioKey == "outputname")
-						ioDesc.m_pszOutputName = ioValue.get<std::string>();
+						SetEntityField<IOConnectionVariant_t>(ioDesc.m_pszOutputName, ioValue.get<std::string>());
 					else if (ioKey == "targetname")
-						ioDesc.m_pszTargetName = ioValue.get<std::string>();
+						SetEntityField<IOConnectionVariant_t>(ioDesc.m_pszTargetName, ioValue.get<std::string>());
+					else if (ioKey == "overrideparam")
+						SetEntityField<IOConnectionVariant_t>(ioDesc.m_pszOverrideParam, ioValue.get<std::string>());
 					else if (ioKey == "delay")
 						ioDesc.m_flDelay = ioValue.get<float>();
+					else if (ioKey == "timestofire")
+						ioDesc.m_nTimesToFire = ioValue.get<int>();
+					else if (ioKey == "targettype")
+						ioDesc.m_eTargetType = ioValue.get<EntityIOTargetType_t>();
 				}
 
 				entry.m_Value = std::move(ioDesc);
@@ -67,30 +101,7 @@ void ParseEntry(nlohmann::detail::iteration_proxy<nlohmann::json::const_iterator
 			ActionEntry entry;
 			entry.m_strName = key;
 
-			// precompile regex if it starts and ends with '/', this will result in m_strValue being empty
-			if (strValue.length() >= 3 && strValue.front() == '/' && strValue.back() == '/')
-			{
-				strValue = strValue.substr(1, strValue.length() - 2);
-				size_t nErrorOffset;
-				int nErrorNumber;
-
-				ConMsg("REGISTERED REGEX: %s\n", strValue.c_str());
-
-				auto re = pcre2_compile((PCRE2_SPTR)strValue.c_str(), strValue.length(), PCRE2_CASELESS, &nErrorNumber, &nErrorOffset, nullptr);
-
-				if (!re)
-				{
-					PCRE2_UCHAR buffer[256];
-					pcre2_get_error_message(nErrorNumber, buffer, sizeof(buffer));
-					ConMsg("PCRE2 compilation failed at offset %d: %s\n", (int)nErrorOffset, buffer);
-					throw std::runtime_error("PCRE2 compilation failed on key: " + key);
-				}
-
-				entry.m_Value = re;
-			} 
-			else
-				entry.m_Value = std::move(strValue);
-
+			SetEntityField<ActionVariant_t>(entry.m_Value, std::move(strValue));
 			vecEntries.push_back(std::move(entry));
 		}
 	}
