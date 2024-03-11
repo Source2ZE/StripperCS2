@@ -4,14 +4,8 @@
 #include <pcre/pcre2.h>
 #include <spdlog/spdlog.h>
 
-template <typename T, typename V>
-T VariantOrDefault(V variant, T defaultValue)
-{
-	if (auto val = std::get_if<T>(&variant))
-		return *val;
+int g_lastIOMatchCount;
 
-	return defaultValue;
-}
 
 bool DoesValueMatch(const char* value, const ActionVariant_t& variant)
 {
@@ -58,12 +52,36 @@ bool DoesValueMatch(const char* value, const IOConnectionVariant_t& variant)
 	return false;
 }
 
+bool DoesConnectionMatch(const EntityIOConnectionDescFat_t* connectionDesc, const IOConnection* matchConnection)
+{
+	spdlog::warn("Connection: {}", connectionDesc->m_pszOutputName);
+	if (!DoesValueMatch(connectionDesc->m_pszInputName, matchConnection->m_pszInputName))
+		return false;
+
+	if (!DoesValueMatch(connectionDesc->m_pszOutputName, matchConnection->m_pszOutputName))
+		return false;
+
+	if (!DoesValueMatch(connectionDesc->m_pszTargetName, matchConnection->m_pszTargetName))
+		return false;
+
+	if (!DoesValueMatch(connectionDesc->m_pszOverrideParam, matchConnection->m_pszOverrideParam))
+		return false;
+
+	if (matchConnection->m_flDelay.has_value() && connectionDesc->m_flDelay != matchConnection->m_flDelay.value())
+		return false;
+
+	if (matchConnection->m_nTimesToFire.has_value() && connectionDesc->m_flDelay != matchConnection->m_flDelay.value())
+		return false;
+}
+
 bool DoesEntityMatch(CEntityKeyValues* keyValues, std::vector<ActionEntry>& m_vecMatches)
 {
+	g_lastIOMatchCount = 0;
 	for (const auto& match : m_vecMatches)
 	{
 		if (auto io = std::get_if<IOConnection>(&match.m_Value))
 		{
+			g_lastIOMatchCount++;
 			int num = keyValues->GetNumConnectionDescs();
 
 			if (!num)
@@ -73,27 +91,8 @@ bool DoesEntityMatch(CEntityKeyValues* keyValues, std::vector<ActionEntry>& m_ve
 			{
 				auto connectionDesc = keyValues->GetConnectionDesc(i);
 
-				if (connectionDesc)
-				{
-					spdlog::warn("Connection: {}", connectionDesc->m_pszOutputName);
-					if (!DoesValueMatch(connectionDesc->m_pszInputName, io->m_pszInputName))
-						return false;
-
-					if (!DoesValueMatch(connectionDesc->m_pszOutputName, io->m_pszOutputName))
-						return false;
-
-					if (!DoesValueMatch(connectionDesc->m_pszTargetName, io->m_pszTargetName))
-						return false;
-
-					if (!DoesValueMatch(connectionDesc->m_pszOverrideParam, io->m_pszOverrideParam))
-						return false;
-
-					if(io->m_flDelay.has_value() && connectionDesc->m_flDelay != io->m_flDelay.value())
-						return false;
-
-					if (io->m_nTimesToFire.has_value() && connectionDesc->m_flDelay != io->m_flDelay.value())
-						return false;
-				}
+				if (connectionDesc && !DoesConnectionMatch(connectionDesc, io))
+					return false;
 			}
 		}
 		else
@@ -128,5 +127,102 @@ void AddEntityInsert(CEntityKeyValues* keyValues, const ActionEntry& entry)
 	else if (auto str = std::get_if<std::string>(&entry.m_Value))
 	{
 		keyValues->SetString(entry.m_strName.c_str(), str->c_str());
+	}
+}
+
+void ApplyMapOverride(std::vector<std::unique_ptr<BaseAction>>& actions, CUtlVector<CEntityKeyValues*>* vecEntityKeyValues, LumpData* lumpData)
+{
+	for (const auto& action : actions)
+	{
+		if (action->GetType() == ActionType_t::Filter)
+		{
+			auto filterAction = (FilterAction*)action.get();
+			FOR_EACH_VEC(*vecEntityKeyValues, j)
+			{
+				if (DoesEntityMatch((*vecEntityKeyValues)[j], filterAction->m_vecMatches))
+				{
+					spdlog::critical("ENTITY MATCHED");
+					vecEntityKeyValues->Remove(j);
+					j--;
+				}
+			}
+		}
+
+		if (action->GetType() == ActionType_t::Add)
+		{
+			auto addAction = (AddAction*)action.get();
+
+			auto keyValues = new CEntityKeyValues(lumpData->m_allocatorContext, EKV_ALLOCATOR_EXTERNAL);
+
+			for (const auto& insert : addAction->m_vecInsertions)
+				AddEntityInsert(keyValues, insert);
+
+			keyValues->AddRef(); // this shit cost me like 3 hours :)
+			vecEntityKeyValues->AddToTail(keyValues);
+		}
+
+		if (action->GetType() == ActionType_t::Modify)
+		{
+			auto modifyAction = (ModifyAction*)action.get();
+			FOR_EACH_VEC(*vecEntityKeyValues, j)
+			{
+				auto keyValues = (*vecEntityKeyValues)[j];
+				if (!DoesEntityMatch(keyValues, modifyAction->m_vecMatches))
+					continue;
+
+				for (const auto& replace : modifyAction->m_vecReplacements)
+				{
+					if (auto io = std::get_if<IOConnection>(&replace.m_Value))
+					{
+						// hack to get match count from DoesEntityMatch to not have to iterate again
+						if (g_lastIOMatchCount != 1)
+						{
+							spdlog::error("Cannot replace IO without exactly 1 IO match condition");
+							continue;
+						}
+
+						for (int i = 0; i < keyValues->GetNumConnectionDescs(); i++)
+						{
+							auto ioDesc = keyValues->GetConnectionDesc(i);
+							if (ioDesc)
+							{
+								keyValues->RemoveConnectionDesc(i);
+								AddEntityInsert(keyValues, replace);
+								i--;
+							}
+						}
+					}
+					else if (auto str = std::get_if<std::string>(&replace.m_Value))
+					{
+						keyValues->SetString(replace.m_strName.c_str(), str->c_str());
+					}
+				}
+
+				for (const auto& _delete : modifyAction->m_vecDeletions)
+				{
+					if (auto io = std::get_if<IOConnection>(&_delete.m_Value))
+					{
+						for (int i = 0; i < keyValues->GetNumConnectionDescs(); i++)
+						{
+							if (auto connectionDesc = keyValues->GetConnectionDesc(i))
+							{
+								spdlog::warn("Connection: {}", connectionDesc->m_pszOutputName);
+								if (!DoesConnectionMatch(connectionDesc, io))
+									continue;
+
+								keyValues->RemoveConnectionDesc(i);
+								i--;
+							}
+						}
+					}
+					else if (!std::holds_alternative<std::monostate>(_delete.m_Value))
+						if (keyValues->HasValue(_delete.m_strName.c_str()) && DoesValueMatch(keyValues->GetString(_delete.m_strName.c_str()), _delete.m_Value))
+							keyValues->RemoveKeyValue(_delete.m_strName.c_str());
+				}
+
+				for (const auto& insert : modifyAction->m_vecInsertions)
+					AddEntityInsert(keyValues, insert);
+			}
+		}
 	}
 }

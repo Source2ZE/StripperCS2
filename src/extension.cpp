@@ -105,6 +105,21 @@ void StripperCS2::OnLevelInit(char const* pMapName,
 	g_mapOverrides.clear();
 
 	std::filesystem::path path(Plat_GetGameDirectory());
+	auto globalFilePath = path / "csgo/addons/StripperCS2/global.json";
+
+	if (std::filesystem::exists(globalFilePath))
+	{
+		Providers::JsonProvider provider;
+
+		try {
+			g_mapOverrides[std::make_pair("GLOBALOVERRIDE", "")] = provider.Load(globalFilePath.string());
+		}
+		catch (const std::exception& e)
+		{
+			spdlog::error("Provider failed to parse {}: {}", globalFilePath.string(), e.what());
+		}
+	}
+
 	path /= "csgo/addons/StripperCS2/maps";
 	path /= pMapName;
 

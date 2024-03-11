@@ -23,6 +23,7 @@
 #include "entitykeyvalues.h"
 #include "pcre/pcre2.h"
 #include <variant>
+#include <memory>
 #include <optional>
 
 struct IOConnection;
@@ -171,3 +172,22 @@ public:
 bool DoesValueMatch(const char* value, const ActionVariant_t& variant);
 bool DoesEntityMatch(CEntityKeyValues* keyValues, std::vector<ActionEntry>& m_vecMatches);
 void AddEntityInsert(CEntityKeyValues* keyValues, const ActionEntry& entry);
+bool DoesConnectionMatch(const EntityIOConnectionDescFat_t* connectionDesc, const IOConnection* matchConnection);
+
+template <typename T, typename V>
+T VariantOrDefault(V variant, T defaultValue)
+{
+	if (auto val = std::get_if<T>(&variant))
+		return *val;
+
+	return defaultValue;
+}
+
+struct LumpData
+{
+	CUtlString m_name;
+	char pad[0x20];
+	CKeyValues3Context* m_allocatorContext;
+};
+
+void ApplyMapOverride(std::vector<std::unique_ptr<BaseAction>>& actions, CUtlVector<CEntityKeyValues*>* vecEntityKeyValues, LumpData* lumpData);
