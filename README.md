@@ -144,3 +144,62 @@ It has 4 sub objects matching Stripper:Source's behavior.
 ```
 
 Unlike Stripper:Source you don't need to delete and insert an output to modify it. You can use the `io` **OBJECT not array** to replace any value of the output. Note that this object is tightly connected with the match sub object. `replace` will only replace outputs that are explicitly matched inside the `io` array in the `match` sub object
+
+
+### Config example
+
+```jsonc
+{
+  "filter": [
+    {
+      // no terrorists >:(
+      "classname": "info_player_terrorist"
+    }
+  ],
+
+  "modify": [
+    {
+      "match":
+      {
+        "classname": "func_door_rotating",
+        "io": [
+          {
+            "outputname": "OnFullyClosed"
+          }
+        ]
+      },
+      "replace":
+      {
+        "targetname": "yippe",
+        "io":
+        {
+          "outputname": "OnClose"
+        }
+      },
+      "insert":
+      {
+        "renderamt": "100",
+        "io": [
+          {
+            "outputname": "OnFullyOpened",
+            "inputname": "Lock",
+            "targetname": "lockable_door"
+          }
+        ]
+      },
+      "delete":
+      {
+        "model": "models/bruh.mdl",
+      }
+    }
+  ],
+
+  "add": [
+    {
+      "classname": "func_button",
+      "origin": "100 10 500"
+      // ...
+    }
+  ]
+}
+```
