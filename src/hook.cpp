@@ -66,7 +66,6 @@ private:
 };
 
 extern std::map<std::pair<std::string, std::string>, std::vector<std::unique_ptr<BaseAction>>> g_mapOverrides;
-extern int g_lastIOMatchCount;
 
 namespace Hook
 {

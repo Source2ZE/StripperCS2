@@ -169,11 +169,6 @@ public:
 	std::vector<ActionEntry> m_vecInsertions;
 };
 
-bool DoesValueMatch(const char* value, const ActionVariant_t& variant);
-bool DoesEntityMatch(CEntityKeyValues* keyValues, std::vector<ActionEntry>& m_vecMatches);
-void AddEntityInsert(CEntityKeyValues* keyValues, const ActionEntry& entry);
-bool DoesConnectionMatch(const EntityIOConnectionDescFat_t* connectionDesc, const IOConnection* matchConnection);
-
 template <typename T, typename V>
 T VariantOrDefault(V variant, T defaultValue)
 {

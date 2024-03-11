@@ -4,9 +4,6 @@
 #include <pcre/pcre2.h>
 #include <spdlog/spdlog.h>
 
-int g_lastIOMatchCount;
-
-
 bool DoesValueMatch(const char* value, const ActionVariant_t& variant)
 {
 	if (auto str = std::get_if<std::string>(&variant))
@@ -54,7 +51,6 @@ bool DoesValueMatch(const char* value, const IOConnectionVariant_t& variant)
 
 bool DoesConnectionMatch(const EntityIOConnectionDescFat_t* connectionDesc, const IOConnection* matchConnection)
 {
-	spdlog::warn("Connection: {}", connectionDesc->m_pszOutputName);
 	if (!DoesValueMatch(connectionDesc->m_pszInputName, matchConnection->m_pszInputName))
 		return false;
 
@@ -72,28 +68,36 @@ bool DoesConnectionMatch(const EntityIOConnectionDescFat_t* connectionDesc, cons
 
 	if (matchConnection->m_nTimesToFire.has_value() && connectionDesc->m_flDelay != matchConnection->m_flDelay.value())
 		return false;
+
+	return true;
 }
 
-bool DoesEntityMatch(CEntityKeyValues* keyValues, std::vector<ActionEntry>& m_vecMatches)
+bool DoesEntityMatch(CEntityKeyValues* keyValues, std::vector<ActionEntry>& m_vecMatches, std::vector<int>* m_vecMatchedIO = nullptr)
 {
-	g_lastIOMatchCount = 0;
 	for (const auto& match : m_vecMatches)
 	{
 		if (auto io = std::get_if<IOConnection>(&match.m_Value))
 		{
-			g_lastIOMatchCount++;
 			int num = keyValues->GetNumConnectionDescs();
 
 			if (!num)
 				return false;
 
+			bool found = false;
 			for (int i = 0; i < num; i++)
 			{
 				auto connectionDesc = keyValues->GetConnectionDesc(i);
 
-				if (connectionDesc && !DoesConnectionMatch(connectionDesc, io))
-					return false;
+				if (connectionDesc && DoesConnectionMatch(connectionDesc, io))
+				{
+					if(m_vecMatchedIO)
+						m_vecMatchedIO->push_back(i);
+					found = true;
+				}
 			}
+
+			if (!found)
+				return false;
 		}
 		else
 		{
@@ -118,7 +122,7 @@ void AddEntityInsert(CEntityKeyValues* keyValues, const ActionEntry& entry)
 		auto inputName = VariantOrDefault<std::string>(io->m_pszInputName, "");
 		auto overrideParam = VariantOrDefault<std::string>(io->m_pszOverrideParam, "");
 		auto delay = io->m_flDelay.value_or(0);
-		auto timesToFire = io->m_nTimesToFire.value_or(0);
+		auto timesToFire = io->m_nTimesToFire.value_or(-1);
 		auto targetType = io->m_eTargetType.value_or(ENTITY_IO_TARGET_INVALID);
 
 		spdlog::info("Created IO {} {} {} {} {} {} {}", outputName.c_str(), targetType, targetName.c_str(), inputName.c_str(), overrideParam.c_str(), delay, timesToFire);
@@ -166,29 +170,37 @@ void ApplyMapOverride(std::vector<std::unique_ptr<BaseAction>>& actions, CUtlVec
 			auto modifyAction = (ModifyAction*)action.get();
 			FOR_EACH_VEC(*vecEntityKeyValues, j)
 			{
+				std::vector<int> vecMatchedIO;
 				auto keyValues = (*vecEntityKeyValues)[j];
-				if (!DoesEntityMatch(keyValues, modifyAction->m_vecMatches))
+				if (!DoesEntityMatch(keyValues, modifyAction->m_vecMatches, &vecMatchedIO))
 					continue;
 
-				for (const auto& replace : modifyAction->m_vecReplacements)
+				for (auto& replace : modifyAction->m_vecReplacements)
 				{
 					if (auto io = std::get_if<IOConnection>(&replace.m_Value))
 					{
-						// hack to get match count from DoesEntityMatch to not have to iterate again
-						if (g_lastIOMatchCount != 1)
+						int num = keyValues->GetNumConnectionDescs();
+						int removed = 0;
+						for (int i = 0; i < num; i++)
 						{
-							spdlog::error("Cannot replace IO without exactly 1 IO match condition");
-							continue;
-						}
-
-						for (int i = 0; i < keyValues->GetNumConnectionDescs(); i++)
-						{
-							auto ioDesc = keyValues->GetConnectionDesc(i);
-							if (ioDesc)
+							if (auto connectionDesc = keyValues->GetConnectionDesc(i - removed))
 							{
-								keyValues->RemoveConnectionDesc(i);
-								AddEntityInsert(keyValues, replace);
-								i--;
+								// checks if this IO entry is matched by our previous modify match
+								if (std::find(vecMatchedIO.begin(), vecMatchedIO.end(), i) == vecMatchedIO.end())
+									continue;
+
+								auto outputName = VariantOrDefault<std::string>(io->m_pszOutputName, connectionDesc->m_pszOutputName);
+								auto targetName = VariantOrDefault<std::string>(io->m_pszTargetName, connectionDesc->m_pszTargetName);
+								auto inputName = VariantOrDefault<std::string>(io->m_pszInputName, connectionDesc->m_pszInputName);
+								auto overrideParam = VariantOrDefault<std::string>(io->m_pszOverrideParam, connectionDesc->m_pszOverrideParam);
+								auto delay = io->m_flDelay.value_or(connectionDesc->m_flDelay);
+								auto timesToFire = io->m_nTimesToFire.value_or(connectionDesc->m_nTimesToFire);
+								auto targetType = io->m_eTargetType.value_or(connectionDesc->m_eTargetType);
+
+								keyValues->RemoveConnectionDesc(i - removed);
+
+								keyValues->AddConnectionDesc(outputName.c_str(), targetType, targetName.c_str(), inputName.c_str(), overrideParam.c_str(), delay, timesToFire);
+								removed++;
 							}
 						}
 					}
