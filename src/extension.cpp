@@ -105,7 +105,7 @@ void StripperCS2::OnLevelInit(char const* pMapName,
 	g_mapOverrides.clear();
 
 	std::filesystem::path path(Plat_GetGameDirectory());
-	auto globalFilePath = path / "csgo/addons/StripperCS2/global.json";
+	auto globalFilePath = path / "csgo/addons/StripperCS2/global.jsonc";
 
 	if (std::filesystem::exists(globalFilePath))
 	{
@@ -139,7 +139,7 @@ void StripperCS2::OnLevelInit(char const* pMapName,
 
 			ConMsg("Loading: %s\n", cleanPath.string().c_str());
 
-			if (filePath.extension() == ".json")
+			if (filePath.extension() == ".jsonc")
 			{
 				std::string worldName = cleanPath.has_parent_path() ? cleanPath.parent_path().string() : pMapName;
 				std::string lumpName = cleanPath.stem().string();

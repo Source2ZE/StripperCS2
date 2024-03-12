@@ -29,13 +29,12 @@ namespace Providers
 
 std::vector<std::unique_ptr<BaseAction>> JsonProvider::Load(const std::string& path)
 {
-	nlohmann::json j;
 	std::ifstream i(path);
 
 	if (!i.is_open())
 		throw std::runtime_error("Failed to open file: " + path);
 
-	i >> j;
+	nlohmann::json j = json::parse(i, nullptr, true, true);
 	i.close();
 
 	std::vector<std::unique_ptr<BaseAction>> actions;
