@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * CS2Fixes
+ * StripperCS2
  * Copyright (C) 2023 Source2ZE
  * =============================================================================
  *
@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #ifdef WIN32
 
 #include "plat.h"
