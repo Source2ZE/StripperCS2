@@ -85,7 +85,7 @@ bool DoesConnectionMatch(const EntityIOConnectionDescFat_t* connectionDesc, cons
 	if (matchConnection->m_flDelay.has_value() && connectionDesc->m_flDelay != matchConnection->m_flDelay.value())
 		return false;
 
-	if (matchConnection->m_nTimesToFire.has_value() && connectionDesc->m_flDelay != matchConnection->m_flDelay.value())
+	if (matchConnection->m_nTimesToFire.has_value() && connectionDesc->m_nTimesToFire != matchConnection->m_nTimesToFire.value())
 		return false;
 
 	return true;
