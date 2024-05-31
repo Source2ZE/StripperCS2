@@ -44,6 +44,8 @@ includedirs {
 defines {
 	"COMPILER_MSVC",
 	"COMPILER_MSVC64",
+	"PLATFORM_64BITS",
+	"X64BITS",
 	"WIN32",
 	"WINDOWS",
 	"CRT_SECURE_NO_WARNINGS",
