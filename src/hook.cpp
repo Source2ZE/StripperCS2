@@ -72,7 +72,9 @@ namespace Hook
 
 CSingleWorldRep* Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWorldRep* singleWorld)
 {
-	g_pCreateWorldInternal(pThis, singleWorld);
+	// The world can fail to be created and the function will return nullptr.
+	if (!g_pCreateWorldInternal(pThis, singleWorld))
+		return nullptr;
 
 	auto pWorld = singleWorld->m_pCWorld;
 
