@@ -70,7 +70,7 @@ extern std::map<std::pair<std::string, std::string>, std::vector<std::unique_ptr
 namespace Hook
 {
 
-void Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWorldRep* singleWorld)
+CSingleWorldRep* Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWorldRep* singleWorld)
 {
 	g_pCreateWorldInternal(pThis, singleWorld);
 
@@ -100,6 +100,8 @@ void Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWorldRep* singl
 			}
 		}
 	}
+
+	return singleWorld;
 }
 
 bool SetupHook()
