@@ -65,6 +65,7 @@ project "StripperCS2"
 	defines { "META_IS_SOURCE2", "PCRE2_CODE_UNIT_WIDTH=8", "PCRE2_STATIC" }
 
 	flags { "MultiProcessorCompile" }
+	disablewarnings { "register" }
 	pic "On"
 
 	links {
