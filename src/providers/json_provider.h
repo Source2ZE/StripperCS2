@@ -24,6 +24,8 @@
 #include <string>
 #include <json.hpp>
 
+using json = nlohmann::json;
+
 namespace Providers
 {
 
@@ -34,8 +36,10 @@ public:
 	~JsonProvider() = default;
 
 	std::vector<std::unique_ptr<BaseAction>> Load(const std::string& path);
+	bool ParserCallback(int depth, json::parse_event_t event, json& parsed);
 private:
-
+	std::string m_sCurrentKey;
+	json m_json;
 };
 
 namespace JSON

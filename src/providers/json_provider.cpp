@@ -22,8 +22,6 @@
 #include "actions/actions.h"
 #include <fstream>
 
-using json = nlohmann::json;
-
 namespace Providers
 {
 
@@ -34,22 +32,41 @@ std::vector<std::unique_ptr<BaseAction>> JsonProvider::Load(const std::string& p
 	if (!i.is_open())
 		throw std::runtime_error("Failed to open file: " + path);
 
-	nlohmann::json j = json::parse(i, nullptr, true, true);
+	json::parse(i, std::bind(&JsonProvider::ParserCallback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), true, true);
 	i.close();
 
 	std::vector<std::unique_ptr<BaseAction>> actions;
 
-	if (j.find("filter") != j.end())
-		JSON::ParseFilters(j, actions);
+	if (m_json.find("filter") != m_json.end())
+		JSON::ParseFilters(m_json, actions);
 
-	if (j.find("add") != j.end())
-		JSON::ParseAdd(j, actions);
+	if (m_json.find("add") != m_json.end())
+		JSON::ParseAdd(m_json, actions);
 
-	if (j.find("modify") != j.end())
-		JSON::ParseModify(j, actions);
+	if (m_json.find("modify") != m_json.end())
+		JSON::ParseModify(m_json, actions);
 
 	return actions;
 
+}
+
+// Our custom JSON parser, which retains the full config even when duplicate top-level keys are used (default parser does not do this)
+bool JsonProvider::ParserCallback(int depth, json::parse_event_t event, json& parsed)
+{
+	if (depth != 1)
+		return true;
+
+	if (event == json::parse_event_t::key)
+	{
+		m_sCurrentKey = parsed.get<std::string>();
+	}
+	else if (event == json::parse_event_t::array_end)
+	{
+		for (json item : parsed)
+			m_json[m_sCurrentKey].push_back(item);
+	}
+
+	return true;
 }
 
 } // namespace Providers
