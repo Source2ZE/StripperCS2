@@ -59,13 +59,13 @@ project "StripperCS2"
 		include("premake/mm-linux.lua")
 		links { "pthread", "z"}
 		linkoptions { '-static-libstdc++', '-static-libgcc' }
+		disablewarnings { "register" }
 
 	filter {}
 
 	defines { "META_IS_SOURCE2", "PCRE2_CODE_UNIT_WIDTH=8", "PCRE2_STATIC" }
 
 	flags { "MultiProcessorCompile" }
-	disablewarnings { "register" }
 	pic "On"
 
 	links {
