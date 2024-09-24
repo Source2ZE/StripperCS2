@@ -56,14 +56,19 @@ bool JsonProvider::ParserCallback(int depth, json::parse_event_t event, json& pa
 	if (depth != 1)
 		return true;
 
-	if (event == json::parse_event_t::key)
+	switch (event)
 	{
-		m_sCurrentKey = parsed.get<std::string>();
-	}
-	else if (event == json::parse_event_t::array_end)
-	{
-		for (json item : parsed)
-			m_json[m_sCurrentKey].push_back(item);
+		case json::parse_event_t::key:
+			m_sCurrentKey = parsed.get<std::string>();
+			break;
+		case json::parse_event_t::array_end:
+			for (json item : parsed)
+				m_json[m_sCurrentKey].push_back(item);
+			break;
+		// Also allow using a single object instead of an array
+		case json::parse_event_t::object_end:
+			m_json[m_sCurrentKey].push_back(parsed);
+			break;
 	}
 
 	return true;
