@@ -23,7 +23,8 @@ From the image above, if you wanted to edit entities inside the de_vertigo defau
 
 ## Configuration
 
-StripperCS2 uses the JSON format instead of a custom config parser like Stripper:Source. Actions such as `filter`, `add`, `modify` are root arrays of the object.
+StripperCS2 uses the JSON format instead of a custom config parser like Stripper:Source. Actions such as `filter`, `add`, `modify` are root arrays or objects. To facilitate organizing large configs, duplicate action keys are permitted.
+
 You can use per map configs as explained in [Folder structure](#folder-structure) or you can use the global config in `addons/StripperCS2/global.jsonc` which will apply all the rules to every loaded lump.
 
 ### Filter
@@ -200,6 +201,13 @@ Unlike Stripper:Source you don't need to delete and insert an output to modify i
       "origin": "100 10 500"
       // ...
     }
-  ]
+  ],
+
+  // Optional single object style, instead of using array
+  "add": {
+    "classname": "trigger_multiple",
+    "origin": "500 80 1000"
+    // ...
+  }
 }
 ```
