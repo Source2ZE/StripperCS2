@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "StripperCS2 schema",
+  "type": "object",
+  "properties": {
+    "filter": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/filterData"
+          }
+        },
+     	  {
+          "type": "object",
+          "$ref": "#/definitions/filterData"
+        }
+      ]
+    },
+    "add": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/addData"
+          }
+        },
+     	  {
+          "type": "object",
+          "$ref": "#/definitions/addData"
+        }
+      ]
+    },
+    "modify": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/modifyData"
+          }
+        },
+     	  {
+          "type": "object",
+          "$ref": "#/definitions/modifyData"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+
+  "definitions": {
+    "ioConnection": {
+      "type": "object",
+      "properties": {
+        "outputname": {
+          "type": "string"
+        },
+        "targetname": {
+          "type": "string"
+        },
+        "inputname": {
+          "type": "string"
+        },
+        "overrideparam": {
+          "type": "string"
+        },
+        "delay": {
+          "type": "number"
+        },
+        "timestofire": {
+          "type": "number"
+        },
+        "targettype": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "filterData": {
+      "type": "object",
+      "properties": {
+        "io": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ioConnection"
+          }
+        }
+      }
+    },
+    "addData": {
+      "type": "object",
+      "properties": {
+        "io": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ioConnection"
+          }
+        }
+      }
+    },
+    "modifyData": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "match": {
+          "type": "object",
+          "properties": {
+            "io": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ioConnection"
+              }
+            }
+          }
+        },
+        "replace": {
+          "type": "object",
+          "properties": {
+            "io": {
+              "type": "object",
+              "$ref": "#/definitions/ioConnection"
+            }
+          }
+        },
+        "delete": {
+          "type": "object",
+          "properties": {
+            "io": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ioConnection"
+              }
+            }
+          }
+        },
+        "insert": {
+          "type": "object",
+          "properties": {
+            "io": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ioConnection"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
