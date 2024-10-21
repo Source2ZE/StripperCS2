@@ -3,6 +3,10 @@
   "title": "StripperCS2 schema",
   "type": "object",
   "properties": {
+		"$schema": {
+			"type": "string",
+			"format": "uri"
+		},
     "filter": {
       "anyOf": [
         {
