@@ -181,7 +181,7 @@ T VariantOrDefault(V variant, T defaultValue)
 struct LumpData
 {
 	CUtlString m_name;
-	char pad[0x20];
+	char pad[0x18];
 	CKeyValues3Context* m_allocatorContext;
 };
 
