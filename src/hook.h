@@ -33,7 +33,7 @@ private:
 	void* vtable;
 public:
 	CUtlString m_name;
-	char pad[0x20];
+	char pad[0x18];
 	void* m_pCWorld;
 };
 
