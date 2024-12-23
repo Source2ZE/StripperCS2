@@ -87,7 +87,7 @@ CSingleWorldRep* Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWor
 			auto& lump = (*vecLumpData)[i];
 			auto lumpData = *(LumpData**)lump;
 
-			auto vecEntityKeyValues = (CUtlVector<CEntityKeyValues*>*)((uint8_t*)lumpData + 0x650);
+			auto vecEntityKeyValues = (CUtlVector<CEntityKeyValues*>*)((uint8_t*)lumpData + 0x1220);
 
 			if (g_mapOverrides.find({ singleWorld->m_name.Get(), lumpData->m_name.Get() }) != g_mapOverrides.end())
 			{
