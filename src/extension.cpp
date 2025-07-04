@@ -144,6 +144,9 @@ void StripperCS2::OnLevelInit(char const* pMapName,
 				std::string worldName = cleanPath.has_parent_path() ? cleanPath.parent_path().string() : pMapName;
 				std::string lumpName = cleanPath.stem().string();
 
+				std::transform(worldName.begin(), worldName.end(), worldName.begin(), [](unsigned char c) { return std::tolower(c); });
+				std::transform(lumpName.begin(), lumpName.end(), lumpName.begin(), [](unsigned char c) { return std::tolower(c); });
+
 				ConMsg("%s %s\n", worldName.c_str(), lumpName.c_str());
 				ConMsg("%s\n", cleanPath.string().c_str());
 

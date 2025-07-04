@@ -28,3 +28,6 @@ project "pcre"
 
 		filter "system:windows"
 			defines { "HAVE_WINDOWS_H" }
+
+		filter "system:linux"
+			disablewarnings { "implicit-function-declaration" }

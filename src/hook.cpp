@@ -88,11 +88,16 @@ CSingleWorldRep* Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWor
 			auto lumpData = *(LumpData**)lump;
 
 			auto vecEntityKeyValues = (CUtlVector<CEntityKeyValues*>*)((uint8_t*)lumpData + 0x1220);
+			std::string singleWorldName = singleWorld->m_name.Get();
+			std::string lumpDataName = lumpData->m_name.Get();
 
-			if (g_mapOverrides.find({ singleWorld->m_name.Get(), lumpData->m_name.Get() }) != g_mapOverrides.end())
+			std::transform(singleWorldName.begin(), singleWorldName.end(), singleWorldName.begin(), [](unsigned char c) { return std::tolower(c); });
+			std::transform(lumpDataName.begin(), lumpDataName.end(), lumpDataName.begin(), [](unsigned char c) { return std::tolower(c); });
+
+			if (g_mapOverrides.find({ singleWorldName, lumpDataName }) != g_mapOverrides.end())
 			{
-				spdlog::info("Map override applying {} {}", singleWorld->m_name.Get(), lumpData->m_name.Get());
-				ApplyMapOverride(g_mapOverrides[{singleWorld->m_name.Get(), lumpData->m_name.Get()}], vecEntityKeyValues, lumpData);
+				spdlog::info("Map override applying {} {}", singleWorldName, lumpDataName);
+				ApplyMapOverride(g_mapOverrides[{singleWorldName, lumpDataName}], vecEntityKeyValues, lumpData);
 			}
 
 			if (g_mapOverrides.find({ "GLOBALOVERRIDE", "" }) != g_mapOverrides.end())
