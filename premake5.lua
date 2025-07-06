@@ -55,6 +55,7 @@ project "StripperCS2"
 		staticruntime "On"
 
 	filter "system:linux"
+		defines { "stricmp=strcasecmp" }
 		cppdialect "c++2a"
 		include("premake/mm-linux.lua")
 		links { "pthread", "z"}
