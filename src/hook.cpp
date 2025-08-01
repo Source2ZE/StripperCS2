@@ -80,7 +80,7 @@ CSingleWorldRep* Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWor
 
 	{
 		Timer timer;
-		auto vecLumpData = (CUtlVector<void*>*)((uint8_t*)pWorld + 0x1B8);;
+		auto vecLumpData = (CUtlVector<void*>*)((uint8_t*)pWorld + 0x1E0);
 
 		FOR_EACH_VEC(*vecLumpData, i)
 		{
@@ -119,7 +119,7 @@ bool SetupHook()
 #ifdef WIN32
 	const byte sig[] = "\x48\x89\x54\x24\x10\x53\x55\x56\x57\x48\x81\xEC\x98\x00\x00\x00";
 #else
-	const byte sig[] = "\x55\x48\x89\xE5\x41\x56\x41\x55\x41\x54\x49\x89\xFC\x53\x48\x89\xF3";
+	const byte sig[] = "\x55\x48\x89\xE5\x41\x57\x41\x56\x41\x55\x41\x54\x49\x89\xFC\x53\x48\x89\xF3";
 #endif
 	g_pCreateWorldInternal = (CreateWorldInternal_t)serverModule->FindSignature((byte*)sig, sizeof(sig) - 1, err);
 
