@@ -43,6 +43,7 @@ project "StripperCS2"
 
 	filter "configurations:Release"
 		defines { "NDEBUG" }
+		symbols "On"
 		optimize "On"
 		libdirs {
 			path.join("vendor", "funchook", "lib", "Release"),
