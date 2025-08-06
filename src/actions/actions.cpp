@@ -143,9 +143,10 @@ void AddEntityInsert(CEntityKeyValues* keyValues, const ActionEntry& entry)
 		auto delay = io->m_flDelay.value_or(0);
 		auto timesToFire = io->m_nTimesToFire.value_or(-1);
 		auto targetType = io->m_eTargetType.value_or(ENTITY_IO_TARGET_ENTITYNAME_OR_CLASSNAME); // Default value used by Hammer IO
+		KeyValues3 kv(KV3_TYPEEX_NULL, KV3_SUBTYPE_UNSPECIFIED);
 
 		spdlog::info("Created IO {} {} {} {} {} {} {}", outputName.c_str(), targetType, targetName.c_str(), inputName.c_str(), overrideParam.c_str(), delay, timesToFire);
-		keyValues->AddConnectionDesc(outputName.c_str(), targetType, targetName.c_str(), inputName.c_str(), overrideParam.c_str(), delay, timesToFire);
+		keyValues->AddConnectionDesc(outputName.c_str(), targetType, targetName.c_str(), inputName.c_str(), overrideParam.c_str(), delay, timesToFire, &kv);
 	}
 	else if (auto str = std::get_if<std::string>(&entry.m_Value))
 	{
@@ -215,10 +216,11 @@ void ApplyMapOverride(std::vector<std::unique_ptr<BaseAction>>& actions, CUtlVec
 								auto delay = io->m_flDelay.value_or(connectionDesc->m_flDelay);
 								auto timesToFire = io->m_nTimesToFire.value_or(connectionDesc->m_nTimesToFire);
 								auto targetType = io->m_eTargetType.value_or(connectionDesc->m_eTargetType);
+								KeyValues3 kv(KV3_TYPEEX_NULL, KV3_SUBTYPE_UNSPECIFIED);
 
 								keyValues->RemoveConnectionDesc(i - removed);
 
-								keyValues->AddConnectionDesc(outputName.c_str(), targetType, targetName.c_str(), inputName.c_str(), overrideParam.c_str(), delay, timesToFire);
+								keyValues->AddConnectionDesc(outputName.c_str(), targetType, targetName.c_str(), inputName.c_str(), overrideParam.c_str(), delay, timesToFire, &kv);
 								removed++;
 							}
 						}
