@@ -66,6 +66,7 @@ private:
 };
 
 extern std::map<std::pair<std::string, std::string>, std::vector<std::unique_ptr<BaseAction>>> g_mapOverrides;
+extern std::string g_strCurrentMapName;
 
 namespace Hook
 {
@@ -100,10 +101,16 @@ CSingleWorldRep* Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWor
 				ApplyMapOverride(g_mapOverrides[{singleWorldName, lumpDataName}], vecEntityKeyValues, lumpData);
 			}
 
-			if (g_mapOverrides.find({ "GLOBALOVERRIDE", "" }) != g_mapOverrides.end())
+			if (lumpDataName == "default_ents" && singleWorldName == g_strCurrentMapName && g_mapOverrides.find({ "GLOBAL_MAP_OVERRIDE", "" }) != g_mapOverrides.end())
 			{
-				spdlog::info("Map override applying global rules");
-				ApplyMapOverride(g_mapOverrides[{"GLOBALOVERRIDE", ""}], vecEntityKeyValues, lumpData);
+				spdlog::info("Map override applying global map rules");
+				ApplyMapOverride(g_mapOverrides[{"GLOBAL_MAP_OVERRIDE", ""}], vecEntityKeyValues, lumpData);
+			}
+
+			if (g_mapOverrides.find({ "GLOBAL_LUMP_OVERRIDE", "" }) != g_mapOverrides.end())
+			{
+				spdlog::info("Map override applying global lump rules");
+				ApplyMapOverride(g_mapOverrides[{"GLOBAL_LUMP_OVERRIDE", ""}], vecEntityKeyValues, lumpData);
 			}
 		}
 	}

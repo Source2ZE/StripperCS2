@@ -52,6 +52,7 @@ CGameEntitySystem* GameEntitySystem()
 }
 
 std::map<std::pair<std::string, std::string>, std::vector<std::unique_ptr<BaseAction>>> g_mapOverrides;
+std::string g_strCurrentMapName = "";
 
 PLUGIN_EXPOSE(StripperCS2, g_StripperCS2);
 bool StripperCS2::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, bool late)
@@ -102,21 +103,43 @@ void StripperCS2::OnLevelInit(char const* pMapName,
 	bool loadGame,
 	bool background)
 {
+	g_strCurrentMapName = pMapName;
 	g_mapOverrides.clear();
 
 	std::filesystem::path path(Plat_GetGameDirectory());
-	auto globalFilePath = path / "csgo/addons/StripperCS2/global.jsonc";
+	auto globalMapFilePath = path / "csgo/addons/StripperCS2/global_map.jsonc";
+	auto globalLumpFilePath = path / "csgo/addons/StripperCS2/global_lump.jsonc";
+	auto legacyGlobalLumpFilePath = path / "csgo/addons/StripperCS2/global.jsonc";
 
-	if (std::filesystem::exists(globalFilePath))
+	if (std::filesystem::exists(globalMapFilePath))
 	{
 		Providers::JsonProvider provider;
 
 		try {
-			g_mapOverrides[std::make_pair("GLOBALOVERRIDE", "")] = provider.Load(globalFilePath.string());
+			g_mapOverrides[std::make_pair("GLOBAL_MAP_OVERRIDE", "")] = provider.Load(globalMapFilePath.string());
 		}
 		catch (const std::exception& e)
 		{
-			spdlog::error("Provider failed to parse {}: {}", globalFilePath.string(), e.what());
+			spdlog::error("Provider failed to parse {}: {}", globalMapFilePath.string(), e.what());
+		}
+	}
+
+	if (std::filesystem::exists(legacyGlobalLumpFilePath))
+	{
+		spdlog::warn("Loading global.jsonc, which is deprecated! You should rename this file to global_lump.jsonc instead");
+		globalLumpFilePath = legacyGlobalLumpFilePath;
+	}
+
+	if (std::filesystem::exists(globalLumpFilePath))
+	{
+		Providers::JsonProvider provider;
+
+		try {
+			g_mapOverrides[std::make_pair("GLOBAL_LUMP_OVERRIDE", "")] = provider.Load(globalLumpFilePath.string());
+		}
+		catch (const std::exception& e)
+		{
+			spdlog::error("Provider failed to parse {}: {}", globalLumpFilePath.string(), e.what());
 		}
 	}
 
@@ -188,7 +211,7 @@ const char* StripperCS2::GetLicense()
 
 const char* StripperCS2::GetVersion()
 {
-	return "1.0.9";
+	return "1.1";
 }
 
 const char* StripperCS2::GetDate()

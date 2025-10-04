@@ -25,7 +25,7 @@ From the image above, if you wanted to edit entities inside the de_vertigo defau
 
 StripperCS2 uses the JSON format instead of a custom config parser like Stripper:Source. Actions such as `filter`, `add`, `modify` are root arrays or objects. To facilitate organizing large configs, duplicate action keys are permitted.
 
-You can use per map configs as explained in [Folder structure](#folder-structure) or you can use the global config in `addons/StripperCS2/global.jsonc` which will apply all the rules to every loaded lump.
+You can use per map configs as explained in [Folder structure](#folder-structure), or you can use global configs. There are two types of global configs, `addons/StripperCS2/global_lump.jsonc` which will apply to every loaded lump, or `addons/StripperCS2/global_map.jsonc` which will only apply once to the main lump (`default_ents`) of the loaded map.
 
 ### Filter
 ```json
