@@ -182,7 +182,7 @@ struct LumpData
 {
 	CUtlString m_name;
 	char pad[0x18];
-	CKeyValues3Context* m_allocatorContext;
+	CKV3Arena* m_allocatorContext;
 };
 
 void ApplyMapOverride(std::vector<std::unique_ptr<BaseAction>>& actions, CUtlVector<CEntityKeyValues*>* vecEntityKeyValues, LumpData* lumpData);
