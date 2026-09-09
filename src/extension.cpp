@@ -1,4 +1,4 @@
-﻿/**
+/**
 * ============================================================================ =
 * StripperCS2
 * Copyright(C) 2023 - 2024 Source2ZE
@@ -20,7 +20,6 @@
 #include <stdio.h>
 #include "extension.h"
 #include "iserver.h"
-#include <funchook.h>
 #include "hook.h"
 #include <filesystem>
 #include "providers/json_provider.h"
@@ -87,8 +86,6 @@ bool StripperCS2::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, b
 
 bool StripperCS2::Unload(char* error, size_t maxlen)
 {
-	Hook::Cleanup();
-
 	return true;
 }
 
@@ -211,7 +208,7 @@ const char* StripperCS2::GetLicense()
 
 const char* StripperCS2::GetVersion()
 {
-	return "1.1.3";
+	return "2.0";
 }
 
 const char* StripperCS2::GetDate()

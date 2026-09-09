@@ -83,17 +83,11 @@ project "StripperCS2"
 	filter "configurations:Debug"
 		defines { "DEBUG" }
 		symbols "On"
-		libdirs {
-			path.join("vendor", "funchook", "lib", "Debug"),
-		}
 
 	filter "configurations:Release"
 		defines { "NDEBUG" }
 		symbols "On"
 		optimize "On"
-		libdirs {
-			path.join("vendor", "funchook", "lib", "Release"),
-		}
 
 	filter "system:windows"
 		cppdialect "c++20"
@@ -117,15 +111,12 @@ project "StripperCS2"
 	pic "On"
 
 	links {
-		"funchook",
-		"distorm",
 		"pcre",
 		"spdlog"
 	}
 
 	includedirs {
 		path.join("vendor", "nlohmann"),
-		path.join("vendor", "funchook", "include"),
 		path.join("vendor", "spdlog", "include"),
 		path.join("vendor"),
 		path.join("src"),

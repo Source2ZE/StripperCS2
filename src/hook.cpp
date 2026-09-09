@@ -18,6 +18,7 @@
 */
 
 #include "hook.h"
+#include "khook.hpp"
 #include <tier0/logging.h>
 #include "utils/module.h"
 #include <vector>
@@ -71,11 +72,11 @@ extern std::string g_strCurrentMapName;
 namespace Hook
 {
 
-CSingleWorldRep* Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWorldRep* singleWorld)
+KHook::Return<CSingleWorldRep*> Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWorldRep* singleWorld)
 {
 	// The world can fail to be created and the function will return nullptr.
-	if (!g_pCreateWorldInternal(pThis, singleWorld))
-		return nullptr;
+	if (!KHook::GetOriginalReturn<CSingleWorldRep*>())
+		return {KHook::Action::Ignore};
 
 	auto pWorld = singleWorld->m_pCWorld;
 
@@ -115,42 +116,31 @@ CSingleWorldRep* Detour_CreateWorldInternal(IWorldRendererMgr* pThis, CSingleWor
 		}
 	}
 
-	return singleWorld;
+	return {KHook::Action::Ignore};
 }
+
+KHook::Function<CSingleWorldRep*, IWorldRendererMgr*, CSingleWorldRep*> createWorldInternalHook(nullptr, Detour_CreateWorldInternal);
 
 bool SetupHook()
 {
-	auto serverModule = new CModule(ROOTBIN, "worldrenderer");
+	CModule worldRendererModule(ROOTBIN, "worldrenderer");
 
-	int err;
 #ifdef WIN32
-	const byte sig[] = "\x48\x89\x5C\x24\x2A\x48\x89\x54\x24\x2A\x55\x56\x57\x48\x81\xEC";
+	const char* sig = "48 89 5C 24 ? 48 89 54 24 ? 55 56 57 48 81 EC";
 #else
-	const byte sig[] = "\x55\x48\x89\xE5\x41\x56\x41\x55\x41\x54\x49\x89\xFC\x53\x48\x89\xF3\x48\x83\xEC\x2A\xF6\x46";
+	const char* sig = "55 48 89 E5 41 56 41 55 41 54 49 89 FC 53 48 89 F3 48 83 EC ? F6 46";
 #endif
-	g_pCreateWorldInternal = (CreateWorldInternal_t)serverModule->FindSignature((byte*)sig, sizeof(sig) - 1, err);
+	auto pCreateWorldInternal = reinterpret_cast<CreateWorldInternal_t>(KHook::LookupSignature(worldRendererModule.m_base, worldRendererModule.m_size, sig));
 
-	if (err)
+	if (!pCreateWorldInternal)
 	{
-		spdlog::critical("Failed to find CWorldRendererMgr::CreateWorld_Internal signature: {}", err);
+		spdlog::critical("Failed to find CWorldRendererMgr::CreateWorldInternal signature");
 		return false;
 	}
 
-	auto g_pHook = funchook_create();
-	funchook_prepare(g_pHook, (void**)&g_pCreateWorldInternal, (void*)Detour_CreateWorldInternal);
-	funchook_install(g_pHook, 0);
+	createWorldInternalHook.Configure(pCreateWorldInternal);
 
 	return true;
-}
-
-void Cleanup()
-{
-	if (g_pHook)
-	{
-		funchook_uninstall(g_pHook, 0);
-		funchook_destroy(g_pHook);
-		g_pHook = nullptr;
-	}
 }
 
 } // namespace Hook

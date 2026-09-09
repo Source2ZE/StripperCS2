@@ -5,11 +5,6 @@ files {
 	path.join(SDK_PATH, "entity2", "entityidentity.cpp"),
 	path.join(SDK_PATH, "entity2", "entitykeyvalues.cpp"),
 	path.join(SDK_PATH, "tier1", "keyvalues3.cpp"),
-	path.join(MM_PATH, "core", "sourcehook", "sourcehook.cpp"),
-	path.join(MM_PATH, "core", "sourcehook", "sourcehook_impl_chookidman.cpp"),
-	path.join(MM_PATH, "core", "sourcehook", "sourcehook_impl_chookmaninfo.cpp"),
-	path.join(MM_PATH, "core", "sourcehook", "sourcehook_impl_cvfnptr.cpp"),
-	path.join(MM_PATH, "core", "sourcehook", "sourcehook_impl_cproto.cpp"),
 }
 
 libdirs {
@@ -38,7 +33,7 @@ includedirs {
 	path.join(SDK_PATH, "public", "public", "entity2"),
 	-- metamod
 	path.join(MM_PATH, "core"),
-	path.join(MM_PATH, "core", "sourcehook"),
+	path.join(MM_PATH, "third_party", "khook", "include"),
 }
 
 defines {

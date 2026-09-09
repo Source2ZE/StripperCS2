@@ -22,7 +22,6 @@
 
 #include <ISmmPlugin.h>
 #include <igameevents.h>
-#include <sh_vector.h>
 
 class StripperCS2 : public ISmmPlugin, public IMetamodListener
 {

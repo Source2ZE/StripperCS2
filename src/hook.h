@@ -19,7 +19,6 @@
 
 #pragma once
 
-#include <funchook.h>
 #include <utlstring.h>
 
 namespace Hook
@@ -37,12 +36,7 @@ public:
 	void* m_pCWorld;
 };
 
-typedef int (*CreateWorldInternal_t)(IWorldRendererMgr* pThis, CSingleWorldRep* singleWorld);
-inline CreateWorldInternal_t g_pCreateWorldInternal = nullptr;
-inline funchook_t* g_pHook = nullptr;
-
-void Detour_WorldInit(IWorldRendererMgr* pThis, CSingleWorldRep* singleWorld);
+typedef CSingleWorldRep* (*CreateWorldInternal_t)(IWorldRendererMgr* pThis, CSingleWorldRep* singleWorld);
 bool SetupHook();
-void Cleanup();
 
 } // namespace Hook
