@@ -82,7 +82,7 @@ KHook::Return<CSingleWorldRep*> Detour_CreateWorldInternal(IWorldRendererMgr* pT
 
 	{
 		Timer timer;
-		auto vecLumpData = (CUtlVector<void*>*)((uint8_t*)pWorld + 0x1E0);
+		auto vecLumpData = (CUtlVector<void*>*)((uint8_t*)pWorld + 0x298);
 
 		FOR_EACH_VEC(*vecLumpData, i)
 		{
