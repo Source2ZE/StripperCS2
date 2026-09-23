@@ -211,7 +211,7 @@ const char* StripperCS2::GetLicense()
 
 const char* StripperCS2::GetVersion()
 {
-	return "1.1.3";
+	return "1.1.4";
 }
 
 const char* StripperCS2::GetDate()
